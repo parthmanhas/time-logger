@@ -24,9 +24,14 @@ import {
   CloseOutlined,
   CheckCircleOutlined,
   UndoOutlined,
-  BulbOutlined
+  BulbOutlined,
+  GoogleOutlined,
+  LogoutOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import { useCollection } from 'react-firebase-hooks/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import {
   collection,
   addDoc,
@@ -39,14 +44,31 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import dayjs from 'dayjs';
-import { db } from './firebase';
+import { db, auth, googleProvider } from './firebase';
 import type { Task, Idea, Project } from './types';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
+const FAKE_PROJECTS: Project[] = [
+  { id: 'p1', name: 'Development', createdAt: Date.now() },
+  { id: 'p2', name: 'Personal', createdAt: Date.now() - 86400000 },
+];
+
+const FAKE_TASKS: Task[] = [
+  { id: 't1', projectId: 'p1', name: 'Migration to Firebase', timestamp: Date.now() - 3600000, completedAt: Date.now() - 3000000, duration: 600000 },
+  { id: 't2', projectId: 'p2', name: 'Workout session', timestamp: Date.now() - 7200000 },
+  { id: 't3', projectId: 'p1', name: 'Code review', timestamp: Date.now() - 10000000 },
+];
+
+const FAKE_IDEAS: Idea[] = [
+  { id: 'i1', content: 'Add dark mode theme', createdAt: Date.now() - 172800000, notes: 'Follow system settings if possible.' },
+  { id: 'i2', content: 'Mobile app version', createdAt: Date.now() - 250000000 },
+];
+
 const App: React.FC = () => {
-  const [taskName, setTaskName] = useState('');
+  const [user] = useAuthState(auth);
+  const [projectTaskNames, setProjectTaskNames] = useState<Record<string, string>>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
@@ -59,20 +81,60 @@ const App: React.FC = () => {
   const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState('');
 
-  const [projectsSnapshot] = useCollection(
-    query(collection(db, 'projects'), orderBy('createdAt', 'desc'))
+  const [projectsSnapshot, loadingProjects, errorProjects] = useCollection(
+    user ? query(collection(db, 'projects'), orderBy('createdAt', 'desc')) : null
   );
-  const projects = projectsSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project));
+  const projects = user
+    ? projectsSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project))
+    : FAKE_PROJECTS;
 
-  const [tasksSnapshot] = useCollection(
-    query(collection(db, 'tasks'), orderBy('timestamp', 'desc'))
+  const [tasksSnapshot, loadingTasks, errorTasks] = useCollection(
+    user ? query(collection(db, 'tasks'), orderBy('timestamp', 'desc')) : null
   );
-  const tasks = tasksSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task));
+  const tasks = user
+    ? tasksSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task))
+    : FAKE_TASKS;
 
-  const [ideasSnapshot] = useCollection(
+  const [ideasSnapshotRaw, loadingIdeas, errorIdeas] = useCollection(
     query(collection(db, 'ideas'), orderBy('createdAt', 'desc'))
   );
-  const ideas = ideasSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Idea));
+  const ideasSnapshot = ideasSnapshotRaw as { docs: { data: () => Idea; id: string }[] } | undefined;
+  const ideas = user
+    ? ideasSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Idea))
+    : FAKE_IDEAS;
+
+  // Show errors from firebase
+  useEffect(() => {
+    const error = errorProjects || errorTasks || errorIdeas;
+    if (error) {
+      console.error('Firestore error:', error);
+      if (error.code === 'permission-denied') {
+        message.error('Access denied. Please check your login.');
+      } else {
+        message.error('Data error: ' + error.message);
+      }
+    }
+  }, [errorProjects, errorTasks, errorIdeas]);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      message.success('Logged in successfully');
+    } catch (error) {
+      console.error('Login error:', error);
+      message.error('Failed to login');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      message.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      message.error('Failed to logout');
+    }
+  };
 
   useEffect(() => {
     document.body.setAttribute('data-theme', currentTheme);
@@ -85,30 +147,36 @@ const App: React.FC = () => {
     }
   }, [projects, selectedProjectId]);
 
-  const handleAddTask = async () => {
-    if (!taskName.trim()) {
-      message.error('Please enter a task name');
+  const handleAddTask = async (projectId: string) => {
+    if (!user) {
+      message.error('Please login to add tasks');
       return;
     }
-    if (!selectedProjectId) {
-      message.error('Please select a project');
+    const currentTaskName = projectTaskNames[projectId] || '';
+    if (!currentTaskName.trim()) {
+      message.error('Please enter a task name');
       return;
     }
 
     try {
       await addDoc(collection(db, 'tasks'), {
-        name: taskName,
-        projectId: selectedProjectId,
-        timestamp: Date.now(),
+        name: currentTaskName,
+        projectId: projectId,
+        timestamp: serverTimestamp(),
       });
-      setTaskName('');
+      setProjectTaskNames(prev => ({ ...prev, [projectId]: '' }));
       message.success('Task logged');
-    } catch {
+    } catch (error) {
+      console.error('Error adding task:', error);
       message.error('Failed to log task');
     }
   };
 
   const handleAddProject = async () => {
+    if (!user) {
+      message.error('Please login to create projects');
+      return;
+    }
     if (!newProjectName.trim()) {
       message.error('Please enter a project name');
       return;
@@ -117,13 +185,14 @@ const App: React.FC = () => {
     try {
       const docRef = await addDoc(collection(db, 'projects'), {
         name: newProjectName,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(),
       });
       setSelectedProjectId(docRef.id);
       setNewProjectName('');
       setIsAddingProject(false);
       message.success('Project created');
-    } catch {
+    } catch (error) {
+      console.error('Error adding project:', error);
       message.error('Failed to create project');
     }
   };
@@ -141,7 +210,8 @@ const App: React.FC = () => {
       setNewProjectName('');
       setIsRenamingProject(false);
       message.success('Project renamed');
-    } catch {
+    } catch (error) {
+      console.error('Error renaming project:', error);
       message.error('Failed to rename project');
     }
   };
@@ -150,13 +220,15 @@ const App: React.FC = () => {
     try {
       await deleteDoc(doc(db, 'tasks', id));
       message.success('Task deleted');
-    } catch {
+    } catch (error) {
+      console.error('Error deleting task:', error);
       message.error('Failed to delete task');
     }
   };
 
   const handleCompleteTask = async (id: string) => {
     try {
+      // eslint-disable-next-line react-hooks/purity
       const now = Date.now();
       const taskSnap = await getDoc(doc(db, 'tasks', id));
       if (taskSnap.exists()) {
@@ -167,7 +239,8 @@ const App: React.FC = () => {
         });
         message.success('Task completed');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error completing task:', error);
       message.error('Failed to complete task');
     }
   };
@@ -179,12 +252,17 @@ const App: React.FC = () => {
         duration: null
       });
       message.success('Task uncompleted');
-    } catch {
+    } catch (error) {
+      console.error('Error uncompleting task:', error);
       message.error('Failed to uncomplete task');
     }
   };
 
   const handleAddIdea = async () => {
+    if (!user) {
+      message.error('Please login to save ideas');
+      return;
+    }
     if (!ideaContent.trim()) {
       message.error('Please enter an idea');
       return;
@@ -193,11 +271,12 @@ const App: React.FC = () => {
     try {
       await addDoc(collection(db, 'ideas'), {
         content: ideaContent,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(),
       });
       setIdeaContent('');
       message.success('Idea saved');
-    } catch {
+    } catch (error) {
+      console.error('Error adding idea:', error);
       message.error('Failed to save idea');
     }
   };
@@ -207,7 +286,8 @@ const App: React.FC = () => {
       await updateDoc(doc(db, 'ideas', id), { notes: tempNotes });
       setEditingIdeaNotesId(null);
       message.success('Notes updated');
-    } catch {
+    } catch (error) {
+      console.error('Error updating idea notes:', error);
       message.error('Failed to update notes');
     }
   };
@@ -216,7 +296,8 @@ const App: React.FC = () => {
     try {
       await updateDoc(doc(db, 'ideas', id), { completedAt: serverTimestamp() });
       message.success('Idea marked as complete');
-    } catch {
+    } catch (error) {
+      console.error('Error completing idea:', error);
       message.error('Failed to complete idea');
     }
   };
@@ -225,7 +306,8 @@ const App: React.FC = () => {
     try {
       await updateDoc(doc(db, 'ideas', id), { completedAt: null });
       message.success('Idea marked as active');
-    } catch {
+    } catch (error) {
+      console.error('Error uncompleting idea:', error);
       message.error('Failed to reactive idea');
     }
   };
@@ -234,7 +316,8 @@ const App: React.FC = () => {
     try {
       await deleteDoc(doc(db, 'ideas', id));
       message.success('Idea deleted');
-    } catch {
+    } catch (error) {
+      console.error('Error deleting idea:', error);
       message.error('Failed to delete idea');
     }
   };
@@ -260,7 +343,8 @@ const App: React.FC = () => {
         setEditingTaskId(null);
         message.success('Time updated');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error editing time:', error);
       message.error('Failed to update time');
     }
   };
@@ -437,7 +521,37 @@ const App: React.FC = () => {
     >
       <Layout style={{ background: 'transparent' }}>
         <Content style={{ padding: '40px 20px', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center' }}>
+            <div>
+              {user ? (
+                <Space>
+                  <Tag
+                    icon={<UserOutlined />}
+                    color="blue"
+                    style={{ borderRadius: '16px', padding: '4px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  >
+                    {user.displayName || user.email}
+                  </Tag>
+                  <Button
+                    type="text"
+                    icon={<LogoutOutlined />}
+                    onClick={handleLogout}
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Logout
+                  </Button>
+                </Space>
+              ) : (
+                <Button
+                  type="primary"
+                  icon={<GoogleOutlined />}
+                  onClick={handleLogin}
+                  style={{ borderRadius: '8px' }}
+                >
+                  Login with Google
+                </Button>
+              )}
+            </div>
             <Space>
               <Text style={{ color: 'var(--text-muted)', fontSize: '12px' }}>THEME</Text>
               <Select
@@ -473,7 +587,7 @@ const App: React.FC = () => {
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
                             <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                              PROJECT
+                              PROJECTS & LOGGING
                             </Text>
                             <Space size="middle">
                               {selectedProjectId && !isAddingProject && !isRenamingProject && (
@@ -517,44 +631,59 @@ const App: React.FC = () => {
                               size="large"
                             />
                           ) : (
-                            <Space wrap size={[8, 8]}>
+                            <div style={{ display: 'grid', gap: '12px' }}>
                               {projects?.map((p: Project) => (
-                                <Button
+                                <div
                                   key={p.id}
-                                  type={selectedProjectId === p.id ? 'primary' : 'default'}
-                                  onClick={() => setSelectedProjectId(p.id)}
                                   style={{
+                                    display: 'flex',
+                                    gap: '12px',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    background: 'var(--bg-input)',
                                     borderRadius: '8px',
-                                    background: selectedProjectId === p.id ? 'var(--primary-color)' : 'var(--bg-input)',
-                                    border: selectedProjectId === p.id ? 'none' : '1px solid var(--border-color)',
-                                    color: 'white'
+                                    border: '1px solid var(--border-color)'
                                   }}
                                 >
-                                  {p.name}
-                                </Button>
+                                  <div style={{ minWidth: '100px', flexShrink: 0 }}>
+                                    <Text
+                                      strong
+                                      style={{
+                                        color: 'var(--text-main)',
+                                        cursor: 'pointer',
+                                        textDecoration: selectedProjectId === p.id ? 'underline' : 'none'
+                                      }}
+                                      onClick={() => setSelectedProjectId(p.id)}
+                                    >
+                                      {p.name}
+                                    </Text>
+                                  </div>
+                                  <Input
+                                    placeholder="What are you doing?"
+                                    variant="borderless"
+                                    value={projectTaskNames[p.id] || ''}
+                                    onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                    onPressEnter={() => handleAddTask(p.id)}
+                                    style={{ color: 'var(--text-main)' }}
+                                  />
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={() => handleAddTask(p.id)}
+                                    disabled={!user}
+                                    style={{ borderRadius: '6px' }}
+                                  >
+                                    Log
+                                  </Button>
+                                </div>
                               ))}
                               {(!projects || projects.length === 0) && (
-                                <Text type="secondary" style={{ fontSize: '12px' }}>No projects yet. Create one!</Text>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  {loadingProjects ? 'Loading projects...' : 'No projects yet. Create one!'}
+                                </Text>
                               )}
-                            </Space>
+                            </div>
                           )}
-                        </div>
-
-                        <div>
-                          <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                            TASK NAME
-                          </Text>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <Input
-                              placeholder="What are you doing? (Press Enter to log)"
-                              value={taskName}
-                              onChange={(e) => setTaskName(e.target.value)}
-                              onPressEnter={handleAddTask}
-                              size="large"
-                              style={{ flex: 1 }}
-                              disabled={!selectedProjectId}
-                            />
-                          </div>
                         </div>
                       </Space>
                     </Card>
@@ -575,8 +704,9 @@ const App: React.FC = () => {
                         dataSource={tasks}
                         columns={columns}
                         rowKey="id"
+                        loading={loadingTasks}
                         pagination={{ pageSize: 15, position: ['bottomCenter'] }}
-                        locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>No logs found.</div> }}
+                        locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>{loadingTasks ? 'Loading logs...' : 'No logs found.'}</div> }}
                       />
                     </Card>
                   </>
@@ -616,6 +746,11 @@ const App: React.FC = () => {
                     <Title level={4} style={{ marginBottom: '16px', color: 'var(--text-main)', fontWeight: 600 }}>Stored Ideas</Title>
 
                     <div style={{ display: 'grid', gap: '16px' }}>
+                      {loadingIdeas && (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          Loading ideas...
+                        </div>
+                      )}
                       {ideas?.map((idea: Idea) => (
                         <Card
                           key={idea.id}
@@ -715,7 +850,7 @@ const App: React.FC = () => {
                           </div>
                         </Card>
                       ))}
-                      {(!ideas || ideas.length === 0) && (
+                      {(!loadingIdeas && (!ideas || ideas.length === 0)) && (
                         <Card className="flat-card">
                           <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                             No ideas yet. Capture your first one above!
