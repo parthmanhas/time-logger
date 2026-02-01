@@ -1,15 +1,19 @@
+import { Timestamp } from 'firebase/firestore';
+
+export type FirestoreDate = Timestamp | number;
+
 export interface Project {
-    id: string; // Firestore uses string IDs by default
+    id: string;
     name: string;
-    createdAt: number;
+    createdAt: FirestoreDate;
 }
 
 export interface Task {
     id: string;
     projectId: string;
     name: string;
-    timestamp: number;
-    completedAt?: number;
+    timestamp: FirestoreDate;
+    completedAt?: FirestoreDate;
     duration?: number;
 }
 
@@ -17,6 +21,6 @@ export interface Idea {
     id: string;
     content: string;
     notes?: string;
-    createdAt: number;
-    completedAt?: number;
+    createdAt: FirestoreDate;
+    completedAt?: FirestoreDate;
 }

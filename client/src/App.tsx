@@ -41,14 +41,21 @@ import {
   query,
   orderBy,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 import dayjs from 'dayjs';
 import { db, auth, googleProvider } from './firebase';
-import type { Task, Idea, Project } from './types';
+import type { Task, Idea, Project, FirestoreDate } from './types';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
+
+const formatDate = (ts: Timestamp | number | undefined, format: string) => {
+  if (!ts) return 'Pending...';
+  const date = ts instanceof Timestamp ? ts.toDate() : ts;
+  return dayjs(date).format(format);
+};
 
 const FAKE_PROJECTS: Project[] = [
   { id: 'p1', name: 'Development', createdAt: Date.now() },
@@ -75,6 +82,7 @@ const App: React.FC = () => {
   const [isRenamingProject, setIsRenamingProject] = useState(false);
 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | null>(null);
   const [editingTime, setEditingTime] = useState<string>('');
   const [currentTheme, setCurrentTheme] = useState<string>('default');
   const [ideaContent, setIdeaContent] = useState('');
@@ -228,14 +236,14 @@ const App: React.FC = () => {
 
   const handleCompleteTask = async (id: string) => {
     try {
-      // eslint-disable-next-line react-hooks/purity
       const now = Date.now();
       const taskSnap = await getDoc(doc(db, 'tasks', id));
       if (taskSnap.exists()) {
         const task = taskSnap.data() as Task;
+        const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp;
         await updateDoc(doc(db, 'tasks', id), {
           completedAt: now,
-          duration: now - task.timestamp
+          duration: now - startTs
         });
         message.success('Task completed');
       }
@@ -321,12 +329,22 @@ const App: React.FC = () => {
       message.error('Failed to delete idea');
     }
   };
-  const startEditingTime = (task: Task) => {
+  const startEditingTime = (task: Task, field: 'timestamp' | 'completedAt' = 'timestamp') => {
     setEditingTaskId(task.id);
-    setEditingTime(dayjs(task.timestamp).format('HH:mm'));
+    setEditingField(field);
+    const ts = task[field];
+    if (!ts && field === 'completedAt') {
+      // If setting a completedAt for the first time, default to now or start time + 1 hour
+      const date = task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp;
+      setEditingTime(dayjs(date).add(1, 'hour').format('HH:mm'));
+    } else {
+      const date = ts instanceof Timestamp ? ts.toDate() : ts;
+      setEditingTime(dayjs(date).format('HH:mm'));
+    }
   };
 
   const saveEditedTime = async (id: string) => {
+    if (!editingField) return;
     try {
       const parts = editingTime.split(':').map(Number);
       if (parts.length < 2 || parts.some(isNaN)) {
@@ -338,9 +356,23 @@ const App: React.FC = () => {
       const taskSnap = await getDoc(doc(db, 'tasks', id));
       if (taskSnap.exists()) {
         const task = taskSnap.data() as Task;
-        const newTimestamp = dayjs(task.timestamp).hour(h).minute(m).second(0).valueOf();
-        await updateDoc(doc(db, 'tasks', id), { timestamp: newTimestamp });
+        const ts = task[editingField];
+        const baseDate = ts instanceof Timestamp ? ts.toDate() : (ts || (task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp));
+        const newTimestamp = dayjs(baseDate).hour(h).minute(m).second(0).valueOf();
+
+        const updates: Record<string, FirestoreDate | number> = { [editingField]: newTimestamp };
+
+        // Recalculate duration
+        const startTime = editingField === 'timestamp' ? newTimestamp : (task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp);
+        const endTime = editingField === 'completedAt' ? newTimestamp : (task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt || null));
+
+        if (startTime && endTime) {
+          updates.duration = endTime - startTime;
+        }
+
+        await updateDoc(doc(db, 'tasks', id), updates as Record<string, unknown>);
         setEditingTaskId(null);
+        setEditingField(null);
         message.success('Time updated');
       }
     } catch (error) {
@@ -359,7 +391,7 @@ const App: React.FC = () => {
 
     const headers = ['Timestamp', 'Project', 'Task'];
     const rows = tasks.map((task: Task) => [
-      dayjs(task.timestamp).format('YYYY-MM-DD HH:mm'),
+      formatDate(task.timestamp, 'YYYY-MM-DD HH:mm'),
       projectMap.get(task.projectId) || 'Unknown',
       task.name
     ]);
@@ -387,7 +419,7 @@ const App: React.FC = () => {
       key: 'timestamp',
       width: '35%',
       render: (ts: number, record: Task) => {
-        if (editingTaskId === record.id) {
+        if (editingTaskId === record.id && editingField === 'timestamp') {
           return (
             <Space size="small">
               <Input
@@ -395,7 +427,7 @@ const App: React.FC = () => {
                 value={editingTime}
                 onChange={e => setEditingTime(e.target.value)}
                 onPressEnter={() => saveEditedTime(record.id)}
-                style={{ width: '90px' }}
+                style={{ width: '80px' }}
                 autoFocus
               />
               <Button
@@ -408,24 +440,27 @@ const App: React.FC = () => {
                 size="small"
                 type="text"
                 icon={<CloseOutlined style={{ color: '#ef4444' }} />}
-                onClick={() => setEditingTaskId(null)}
+                onClick={() => {
+                  setEditingTaskId(null);
+                  setEditingField(null);
+                }}
               />
             </Space>
           );
         }
         return (
           <Space
-            onClick={() => startEditingTime(record)}
+            onClick={() => startEditingTime(record, 'timestamp')}
             style={{ cursor: 'pointer' }}
           >
             <ClockCircleOutlined style={{ color: 'var(--primary-color)' }} />
             <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px' }}>
-              {dayjs(ts).format('HH:mm')}
+              {formatDate(ts, 'HH:mm')}
             </Title>
             <Text type="secondary" style={{ fontSize: '12px' }}>
-              {dayjs(ts).format('MMM DD')}
+              {formatDate(ts, 'MMM DD')}
             </Text>
-            <EditOutlined style={{ fontSize: '12px', opacity: 0.3 }} />
+            <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
           </Space>
         );
       },
@@ -469,15 +504,53 @@ const App: React.FC = () => {
               </Space>
             </Space>
             {record.completedAt ? (
-              <Button
-                type="text"
-                size="small"
-                icon={<UndoOutlined />}
-                onClick={() => handleUncompleteTask(record.id)}
-                style={{ color: 'var(--text-muted)', fontSize: '12px' }}
-              >
-                Undo
-              </Button>
+              <Space>
+                {editingTaskId === record.id && editingField === 'completedAt' ? (
+                  <Space size="small">
+                    <Input
+                      size="small"
+                      value={editingTime}
+                      onChange={e => setEditingTime(e.target.value)}
+                      onPressEnter={() => saveEditedTime(record.id)}
+                      style={{ width: '80px' }}
+                      autoFocus
+                    />
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<CheckOutlined style={{ color: '#10b981' }} />}
+                      onClick={() => saveEditedTime(record.id)}
+                    />
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<CloseOutlined style={{ color: '#ef4444' }} />}
+                      onClick={() => {
+                        setEditingTaskId(null);
+                        setEditingField(null);
+                      }}
+                    />
+                  </Space>
+                ) : (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => startEditingTime(record, 'completedAt')}
+                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                  >
+                    Ended {formatDate(record.completedAt, 'HH:mm')}
+                  </Button>
+                )}
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<UndoOutlined />}
+                  onClick={() => handleUncompleteTask(record.id)}
+                  style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+                >
+                  Undo
+                </Button>
+              </Space>
             ) : (
               <Button
                 type="text"
@@ -819,7 +892,7 @@ const App: React.FC = () => {
                               )}
                               <div style={{ marginTop: '12px' }}>
                                 <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                  Created {dayjs(idea.createdAt).format('MMM DD · HH:mm')}
+                                  Created {formatDate(idea.createdAt, 'MMM DD · HH:mm')}
                                 </Text>
                               </div>
                             </div>
