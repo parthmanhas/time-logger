@@ -26,34 +26,53 @@ import {
   UndoOutlined,
   BulbOutlined
 } from '@ant-design/icons';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  getDoc,
+  serverTimestamp
+} from 'firebase/firestore';
 import dayjs from 'dayjs';
-import { db, type Task, type Idea } from './db';
+import { db } from './firebase';
+import type { Task, Idea, Project } from './types';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
 const App: React.FC = () => {
   const [taskName, setTaskName] = useState('');
-  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isRenamingProject, setIsRenamingProject] = useState(false);
 
-  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTime, setEditingTime] = useState<string>('');
   const [currentTheme, setCurrentTheme] = useState<string>('default');
   const [ideaContent, setIdeaContent] = useState('');
-  const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<number | null>(null);
+  const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState('');
 
-  const projects = useLiveQuery(() => db.projects.toArray());
-  const tasks = useLiveQuery(() =>
-    db.tasks.reverse().toArray()
+  const [projectsSnapshot] = useCollection(
+    query(collection(db, 'projects'), orderBy('createdAt', 'desc'))
   );
-  const ideas = useLiveQuery(() =>
-    db.ideas.reverse().toArray()
+  const projects = projectsSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project));
+
+  const [tasksSnapshot] = useCollection(
+    query(collection(db, 'tasks'), orderBy('timestamp', 'desc'))
   );
+  const tasks = tasksSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task));
+
+  const [ideasSnapshot] = useCollection(
+    query(collection(db, 'ideas'), orderBy('createdAt', 'desc'))
+  );
+  const ideas = ideasSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Idea));
 
   useEffect(() => {
     document.body.setAttribute('data-theme', currentTheme);
@@ -61,7 +80,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (projects && projects.length > 0 && selectedProjectId === undefined) {
-      setSelectedProjectId(projects[0].id);
+      const firstId = projects[0].id;
+      setTimeout(() => setSelectedProjectId(firstId), 0);
     }
   }, [projects, selectedProjectId]);
 
@@ -76,14 +96,14 @@ const App: React.FC = () => {
     }
 
     try {
-      await db.tasks.add({
+      await addDoc(collection(db, 'tasks'), {
         name: taskName,
         projectId: selectedProjectId,
         timestamp: Date.now(),
       });
       setTaskName('');
       message.success('Task logged');
-    } catch (error) {
+    } catch {
       message.error('Failed to log task');
     }
   };
@@ -95,15 +115,15 @@ const App: React.FC = () => {
     }
 
     try {
-      const id = await db.projects.add({
+      const docRef = await addDoc(collection(db, 'projects'), {
         name: newProjectName,
         createdAt: Date.now(),
       });
-      setSelectedProjectId(id as number);
+      setSelectedProjectId(docRef.id);
       setNewProjectName('');
       setIsAddingProject(false);
       message.success('Project created');
-    } catch (error) {
+    } catch {
       message.error('Failed to create project');
     }
   };
@@ -115,50 +135,51 @@ const App: React.FC = () => {
     }
 
     try {
-      await db.projects.update(selectedProjectId, {
+      await updateDoc(doc(db, 'projects', selectedProjectId), {
         name: newProjectName,
       });
       setNewProjectName('');
       setIsRenamingProject(false);
       message.success('Project renamed');
-    } catch (error) {
+    } catch {
       message.error('Failed to rename project');
     }
   };
 
-  const handleDeleteTask = async (id: number) => {
+  const handleDeleteTask = async (id: string) => {
     try {
-      await db.tasks.delete(id);
+      await deleteDoc(doc(db, 'tasks', id));
       message.success('Task deleted');
-    } catch (error) {
+    } catch {
       message.error('Failed to delete task');
     }
   };
 
-  const handleCompleteTask = async (id: number) => {
+  const handleCompleteTask = async (id: string) => {
     try {
       const now = Date.now();
-      const task = await db.tasks.get(id);
-      if (task) {
-        await db.tasks.update(id, {
+      const taskSnap = await getDoc(doc(db, 'tasks', id));
+      if (taskSnap.exists()) {
+        const task = taskSnap.data() as Task;
+        await updateDoc(doc(db, 'tasks', id), {
           completedAt: now,
           duration: now - task.timestamp
         });
         message.success('Task completed');
       }
-    } catch (error) {
+    } catch {
       message.error('Failed to complete task');
     }
   };
 
-  const handleUncompleteTask = async (id: number) => {
+  const handleUncompleteTask = async (id: string) => {
     try {
-      await db.tasks.update(id, {
-        completedAt: undefined,
-        duration: undefined
+      await updateDoc(doc(db, 'tasks', id), {
+        completedAt: null,
+        duration: null
       });
       message.success('Task uncompleted');
-    } catch (error) {
+    } catch {
       message.error('Failed to uncomplete task');
     }
   };
@@ -170,59 +191,59 @@ const App: React.FC = () => {
     }
 
     try {
-      await db.ideas.add({
+      await addDoc(collection(db, 'ideas'), {
         content: ideaContent,
         createdAt: Date.now(),
       });
       setIdeaContent('');
       message.success('Idea saved');
-    } catch (error) {
+    } catch {
       message.error('Failed to save idea');
     }
   };
 
-  const handleUpdateIdeaNotes = async (id: number) => {
+  const handleUpdateIdeaNotes = async (id: string) => {
     try {
-      await db.ideas.update(id, { notes: tempNotes });
+      await updateDoc(doc(db, 'ideas', id), { notes: tempNotes });
       setEditingIdeaNotesId(null);
       message.success('Notes updated');
-    } catch (error) {
+    } catch {
       message.error('Failed to update notes');
     }
   };
 
-  const handleCompleteIdea = async (id: number) => {
+  const handleCompleteIdea = async (id: string) => {
     try {
-      await db.ideas.update(id, { completedAt: Date.now() });
+      await updateDoc(doc(db, 'ideas', id), { completedAt: serverTimestamp() });
       message.success('Idea marked as complete');
-    } catch (error) {
+    } catch {
       message.error('Failed to complete idea');
     }
   };
 
-  const handleUncompleteIdea = async (id: number) => {
+  const handleUncompleteIdea = async (id: string) => {
     try {
-      await db.ideas.update(id, { completedAt: undefined });
+      await updateDoc(doc(db, 'ideas', id), { completedAt: null });
       message.success('Idea marked as active');
-    } catch (error) {
+    } catch {
       message.error('Failed to reactive idea');
     }
   };
 
-  const handleDeleteIdea = async (id: number) => {
+  const handleDeleteIdea = async (id: string) => {
     try {
-      await db.ideas.delete(id);
+      await deleteDoc(doc(db, 'ideas', id));
       message.success('Idea deleted');
-    } catch (error) {
+    } catch {
       message.error('Failed to delete idea');
     }
   };
   const startEditingTime = (task: Task) => {
-    setEditingTaskId(task.id!);
+    setEditingTaskId(task.id);
     setEditingTime(dayjs(task.timestamp).format('HH:mm'));
   };
 
-  const saveEditedTime = async (id: number) => {
+  const saveEditedTime = async (id: string) => {
     try {
       const parts = editingTime.split(':').map(Number);
       if (parts.length < 2 || parts.some(isNaN)) {
@@ -231,14 +252,15 @@ const App: React.FC = () => {
       }
       const [h, m] = parts;
 
-      const task = await db.tasks.get(id);
-      if (task) {
+      const taskSnap = await getDoc(doc(db, 'tasks', id));
+      if (taskSnap.exists()) {
+        const task = taskSnap.data() as Task;
         const newTimestamp = dayjs(task.timestamp).hour(h).minute(m).second(0).valueOf();
-        await db.tasks.update(id, { timestamp: newTimestamp });
+        await updateDoc(doc(db, 'tasks', id), { timestamp: newTimestamp });
         setEditingTaskId(null);
         message.success('Time updated');
       }
-    } catch (error) {
+    } catch {
       message.error('Failed to update time');
     }
   };
@@ -249,7 +271,7 @@ const App: React.FC = () => {
       return;
     }
 
-    const projectMap = new Map(projects?.map((p: any) => [p.id, p.name]));
+    const projectMap = new Map(projects?.map((p: Project) => [p.id, p.name]));
 
     const headers = ['Timestamp', 'Project', 'Task'];
     const rows = tasks.map((task: Task) => [
@@ -288,7 +310,7 @@ const App: React.FC = () => {
                 size="small"
                 value={editingTime}
                 onChange={e => setEditingTime(e.target.value)}
-                onPressEnter={() => saveEditedTime(record.id!)}
+                onPressEnter={() => saveEditedTime(record.id)}
                 style={{ width: '90px' }}
                 autoFocus
               />
@@ -296,7 +318,7 @@ const App: React.FC = () => {
                 size="small"
                 type="text"
                 icon={<CheckOutlined style={{ color: '#10b981' }} />}
-                onClick={() => saveEditedTime(record.id!)}
+                onClick={() => saveEditedTime(record.id)}
               />
               <Button
                 size="small"
@@ -313,9 +335,9 @@ const App: React.FC = () => {
             style={{ cursor: 'pointer' }}
           >
             <ClockCircleOutlined style={{ color: 'var(--primary-color)' }} />
-            <Text style={{ color: 'var(--text-main)' }}>
+            <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px' }}>
               {dayjs(ts).format('HH:mm')}
-            </Text>
+            </Title>
             <Text type="secondary" style={{ fontSize: '12px' }}>
               {dayjs(ts).format('MMM DD')}
             </Text>
@@ -329,7 +351,7 @@ const App: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: Task) => {
-        const project = projects?.find((p: any) => p.id === record.projectId);
+        const project = projects?.find((p: Project) => p.id === record.projectId);
 
         const formatDuration = (ms: number) => {
           const mins = Math.floor(ms / (1000 * 60));
@@ -367,7 +389,7 @@ const App: React.FC = () => {
                 type="text"
                 size="small"
                 icon={<UndoOutlined />}
-                onClick={() => handleUncompleteTask(record.id!)}
+                onClick={() => handleUncompleteTask(record.id)}
                 style={{ color: 'var(--text-muted)', fontSize: '12px' }}
               >
                 Undo
@@ -377,7 +399,7 @@ const App: React.FC = () => {
                 type="text"
                 size="small"
                 icon={<CheckCircleOutlined />}
-                onClick={() => handleCompleteTask(record.id!)}
+                onClick={() => handleCompleteTask(record.id)}
                 style={{ color: 'var(--primary-color)', fontSize: '12px' }}
               >
                 Complete
@@ -391,12 +413,12 @@ const App: React.FC = () => {
       title: '',
       key: 'action',
       width: '60px',
-      render: (_: any, record: Task) => (
+      render: (_: unknown, record: Task) => (
         <Button
           type="text"
           danger
           icon={<DeleteOutlined />}
-          onClick={() => handleDeleteTask(record.id!)}
+          onClick={() => handleDeleteTask(record.id)}
         />
       ),
     },
@@ -496,7 +518,7 @@ const App: React.FC = () => {
                             />
                           ) : (
                             <Space wrap size={[8, 8]}>
-                              {projects?.map((p: any) => (
+                              {projects?.map((p: Project) => (
                                 <Button
                                   key={p.id}
                                   type={selectedProjectId === p.id ? 'primary' : 'default'}
@@ -626,7 +648,7 @@ const App: React.FC = () => {
                                     style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--primary-color)' }}
                                   />
                                   <Space style={{ marginTop: '8px' }}>
-                                    <Button size="small" type="primary" onClick={() => handleUpdateIdeaNotes(idea.id!)}>Save Notes</Button>
+                                    <Button size="small" type="primary" onClick={() => handleUpdateIdeaNotes(idea.id)}>Save Notes</Button>
                                     <Button size="small" type="text" onClick={() => setEditingIdeaNotesId(null)} style={{ color: 'var(--text-muted)' }}>Cancel</Button>
                                   </Space>
                                 </div>
@@ -635,7 +657,7 @@ const App: React.FC = () => {
                                   {idea.notes ? (
                                     <div
                                       onClick={() => {
-                                        setEditingIdeaNotesId(idea.id!);
+                                        setEditingIdeaNotesId(idea.id);
                                         setTempNotes(idea.notes || '');
                                       }}
                                       style={{ cursor: 'pointer' }}
@@ -650,7 +672,7 @@ const App: React.FC = () => {
                                       size="small"
                                       icon={<EditOutlined />}
                                       onClick={() => {
-                                        setEditingIdeaNotesId(idea.id!);
+                                        setEditingIdeaNotesId(idea.id);
                                         setTempNotes('');
                                       }}
                                       style={{ padding: 0, height: 'auto', fontSize: '12px' }}
@@ -671,14 +693,14 @@ const App: React.FC = () => {
                                 <Button
                                   type="text"
                                   icon={<UndoOutlined />}
-                                  onClick={() => handleUncompleteIdea(idea.id!)}
+                                  onClick={() => handleUncompleteIdea(idea.id)}
                                   className="action-btn"
                                 />
                               ) : (
                                 <Button
                                   type="text"
                                   icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-                                  onClick={() => handleCompleteIdea(idea.id!)}
+                                  onClick={() => handleCompleteIdea(idea.id)}
                                   className="action-btn"
                                 />
                               )}
@@ -686,7 +708,7 @@ const App: React.FC = () => {
                                 type="text"
                                 danger
                                 icon={<DeleteOutlined />}
-                                onClick={() => handleDeleteIdea(idea.id!)}
+                                onClick={() => handleDeleteIdea(idea.id)}
                                 className="action-btn"
                               />
                             </Space>
