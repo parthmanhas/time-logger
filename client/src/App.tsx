@@ -10,7 +10,8 @@ import {
   Tag,
   message,
   ConfigProvider,
-  theme
+  theme,
+  Select
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,7 +20,9 @@ import {
   DeleteOutlined,
   EditOutlined,
   CheckOutlined,
-  CloseOutlined
+  CloseOutlined,
+  CheckCircleOutlined,
+  UndoOutlined
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -33,14 +36,20 @@ const App: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
+  const [isRenamingProject, setIsRenamingProject] = useState(false);
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editingTime, setEditingTime] = useState<string>('');
+  const [currentTheme, setCurrentTheme] = useState<string>('default');
 
   const projects = useLiveQuery(() => db.projects.toArray());
   const tasks = useLiveQuery(() =>
     db.tasks.reverse().toArray()
   );
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', currentTheme);
+  }, [currentTheme]);
 
   useEffect(() => {
     if (projects && projects.length > 0 && selectedProjectId === undefined) {
@@ -91,6 +100,24 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRenameProject = async () => {
+    if (!newProjectName.trim() || !selectedProjectId) {
+      message.error('Please enter a valid project name');
+      return;
+    }
+
+    try {
+      await db.projects.update(selectedProjectId, {
+        name: newProjectName,
+      });
+      setNewProjectName('');
+      setIsRenamingProject(false);
+      message.success('Project renamed');
+    } catch (error) {
+      message.error('Failed to rename project');
+    }
+  };
+
   const handleDeleteTask = async (id: number) => {
     try {
       await db.tasks.delete(id);
@@ -100,22 +127,50 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCompleteTask = async (id: number) => {
+    try {
+      const now = Date.now();
+      const task = await db.tasks.get(id);
+      if (task) {
+        await db.tasks.update(id, {
+          completedAt: now,
+          duration: now - task.timestamp
+        });
+        message.success('Task completed');
+      }
+    } catch (error) {
+      message.error('Failed to complete task');
+    }
+  };
+
+  const handleUncompleteTask = async (id: number) => {
+    try {
+      await db.tasks.update(id, {
+        completedAt: undefined,
+        duration: undefined
+      });
+      message.success('Task uncompleted');
+    } catch (error) {
+      message.error('Failed to uncomplete task');
+    }
+  };
   const startEditingTime = (task: Task) => {
     setEditingTaskId(task.id!);
-    setEditingTime(dayjs(task.timestamp).format('HH:mm:ss'));
+    setEditingTime(dayjs(task.timestamp).format('HH:mm'));
   };
 
   const saveEditedTime = async (id: number) => {
     try {
-      const [h, m, s] = editingTime.split(':').map(Number);
-      if (isNaN(h) || isNaN(m) || isNaN(s)) {
-        message.error('Invalid time format. Use HH:mm:ss');
+      const parts = editingTime.split(':').map(Number);
+      if (parts.length < 2 || parts.some(isNaN)) {
+        message.error('Invalid time format. Use HH:mm');
         return;
       }
+      const [h, m] = parts;
 
       const task = await db.tasks.get(id);
       if (task) {
-        const newTimestamp = dayjs(task.timestamp).hour(h).minute(m).second(s).valueOf();
+        const newTimestamp = dayjs(task.timestamp).hour(h).minute(m).second(0).valueOf();
         await db.tasks.update(id, { timestamp: newTimestamp });
         setEditingTaskId(null);
         message.success('Time updated');
@@ -135,7 +190,7 @@ const App: React.FC = () => {
 
     const headers = ['Timestamp', 'Project', 'Task'];
     const rows = tasks.map((task: Task) => [
-      dayjs(task.timestamp).format('YYYY-MM-DD HH:mm:ss'),
+      dayjs(task.timestamp).format('YYYY-MM-DD HH:mm'),
       projectMap.get(task.projectId) || 'Unknown',
       task.name
     ]);
@@ -170,6 +225,7 @@ const App: React.FC = () => {
                 size="small"
                 value={editingTime}
                 onChange={e => setEditingTime(e.target.value)}
+                onPressEnter={() => saveEditedTime(record.id!)}
                 style={{ width: '90px' }}
                 autoFocus
               />
@@ -195,7 +251,7 @@ const App: React.FC = () => {
           >
             <ClockCircleOutlined style={{ color: 'var(--primary-color)' }} />
             <Text style={{ color: 'var(--text-main)' }}>
-              {dayjs(ts).format('HH:mm:ss')}
+              {dayjs(ts).format('HH:mm')}
             </Text>
             <Text type="secondary" style={{ fontSize: '12px' }}>
               {dayjs(ts).format('MMM DD')}
@@ -211,17 +267,60 @@ const App: React.FC = () => {
       key: 'name',
       render: (name: string, record: Task) => {
         const project = projects?.find((p: any) => p.id === record.projectId);
+
+        const formatDuration = (ms: number) => {
+          const mins = Math.floor(ms / (1000 * 60));
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          return `${h > 0 ? `${h}h ` : ''}${m}m`;
+        };
+
         return (
-          <Space direction="vertical" size={0}>
-            <Text style={{ color: 'var(--text-main)', fontSize: '15px', fontWeight: 500 }}>
-              {name}
-            </Text>
-            {project && (
-              <Tag color="blue" bordered={false} style={{ fontSize: '10px', marginTop: '4px', background: '#334155', color: '#818cf8' }}>
-                {project.name}
-              </Tag>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Space direction="vertical" size={0}>
+              <Text style={{
+                color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)',
+                fontSize: '15px',
+                fontWeight: 500,
+                textDecoration: record.completedAt ? 'line-through' : 'none'
+              }}>
+                {name}
+              </Text>
+              <Space>
+                {project && (
+                  <Tag color="blue" bordered={false} style={{ fontSize: '10px', background: 'var(--bg-input)', color: 'var(--accent-color)' }}>
+                    {project.name}
+                  </Tag>
+                )}
+                {record.duration && (
+                  <Tag color="success" bordered={false} style={{ fontSize: '10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                    {formatDuration(record.duration)}
+                  </Tag>
+                )}
+              </Space>
+            </Space>
+            {record.completedAt ? (
+              <Button
+                type="text"
+                size="small"
+                icon={<UndoOutlined />}
+                onClick={() => handleUncompleteTask(record.id!)}
+                style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+              >
+                Undo
+              </Button>
+            ) : (
+              <Button
+                type="text"
+                size="small"
+                icon={<CheckCircleOutlined />}
+                onClick={() => handleCompleteTask(record.id!)}
+                style={{ color: 'var(--primary-color)', fontSize: '12px' }}
+              >
+                Complete
+              </Button>
             )}
-          </Space>
+          </div>
         );
       },
     },
@@ -245,7 +344,7 @@ const App: React.FC = () => {
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: '#4f46e5',
+          colorPrimary: '#2563eb',
           borderRadius: 8,
           fontFamily: 'Inter, sans-serif',
         },
@@ -253,11 +352,21 @@ const App: React.FC = () => {
     >
       <Layout style={{ background: 'transparent' }}>
         <Content style={{ padding: '40px 20px', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
-          <div style={{ marginBottom: '40px' }}>
-            <Title level={2} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 700 }}>
-              Time Tracker
-            </Title>
-            <Text style={{ color: 'var(--text-muted)' }}>Simple and efficient logging.</Text>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+            <Space>
+              <Text style={{ color: 'var(--text-muted)', fontSize: '12px' }}>THEME</Text>
+              <Select
+                defaultValue="default"
+                style={{ width: 120 }}
+                onChange={setCurrentTheme}
+                size="small"
+              >
+                <Select.Option value="default">Slate</Select.Option>
+                <Select.Option value="midnight">Midnight</Select.Option>
+                <Select.Option value="emerald">Emerald</Select.Option>
+                <Select.Option value="rose">Rose</Select.Option>
+              </Select>
+            </Space>
           </div>
 
           <Card className="flat-card" style={{ marginBottom: '32px' }}>
@@ -267,23 +376,45 @@ const App: React.FC = () => {
                   <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                     PROJECT
                   </Text>
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => setIsAddingProject(!isAddingProject)}
-                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
-                  >
-                    {isAddingProject ? 'Back' : '+ New Project'}
-                  </Button>
+                  <Space size="middle">
+                    {selectedProjectId && !isAddingProject && !isRenamingProject && (
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => {
+                          const p = projects?.find(proj => proj.id === selectedProjectId);
+                          if (p) {
+                            setNewProjectName(p.name);
+                            setIsRenamingProject(true);
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                      >
+                        Rename Selected
+                      </Button>
+                    )}
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setIsAddingProject(!isAddingProject);
+                        setIsRenamingProject(false);
+                        setNewProjectName('');
+                      }}
+                      style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
+                    >
+                      {isAddingProject || isRenamingProject ? 'Cancel' : '+ New Project'}
+                    </Button>
+                  </Space>
                 </div>
 
-                {isAddingProject ? (
+                {isAddingProject || isRenamingProject ? (
                   <Input.Search
-                    placeholder="Enter new project name"
-                    enterButton="Create"
+                    placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
+                    enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
-                    onSearch={handleAddProject}
+                    onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
                     size="large"
                   />
                 ) : (
@@ -316,22 +447,14 @@ const App: React.FC = () => {
                 </Text>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <Input
-                    placeholder="What are you doing?"
+                    placeholder="What are you doing? (Press Enter to log)"
                     value={taskName}
                     onChange={(e) => setTaskName(e.target.value)}
                     onPressEnter={handleAddTask}
                     size="large"
                     style={{ flex: 1 }}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddTask}
-                    className="primary-button"
                     disabled={!selectedProjectId}
-                  >
-                    Log Task
-                  </Button>
+                  />
                 </div>
               </div>
             </Space>
