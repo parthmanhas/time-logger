@@ -143,3 +143,42 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Tabs Styling */
+.custom-tabs .ant-tabs-nav {
+  margin-bottom: 32px !important;
+}
+
+.custom-tabs .ant-tabs-tab {
+  padding: 12px 24px !important;
+  margin: 0 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-bottom: 2px solid transparent !important;
+}
+
+.custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--primary-color) !important;
+  font-weight: 600 !important;
+}
+
+.custom-tabs .ant-tabs-ink-bar {
+  background: var(--primary-color) !important;
+  height: 3px !important;
+}
+
+.custom-tabs .ant-tabs-tab:hover {
+  color: var(--accent-color) !important;
+}
+
+.custom-tabs .ant-tabs-tab .anticon {
+  margin-right: 8px;
+}
+
+.ant-tabs-top>.ant-tabs-nav::before {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Ideas specific styling */
+.ant-input-textarea-show-count::after {
+  color: var(--text-muted) !important;
+}

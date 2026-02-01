@@ -11,7 +11,8 @@ import {
   message,
   ConfigProvider,
   theme,
-  Select
+  Select,
+  Tabs
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,11 +23,12 @@ import {
   CheckOutlined,
   CloseOutlined,
   CheckCircleOutlined,
-  UndoOutlined
+  UndoOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
-import { db, type Task } from './db';
+import { db, type Task, type Idea } from './db';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -41,10 +43,16 @@ const App: React.FC = () => {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editingTime, setEditingTime] = useState<string>('');
   const [currentTheme, setCurrentTheme] = useState<string>('default');
+  const [ideaContent, setIdeaContent] = useState('');
+  const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<number | null>(null);
+  const [tempNotes, setTempNotes] = useState('');
 
   const projects = useLiveQuery(() => db.projects.toArray());
   const tasks = useLiveQuery(() =>
     db.tasks.reverse().toArray()
+  );
+  const ideas = useLiveQuery(() =>
+    db.ideas.reverse().toArray()
   );
 
   useEffect(() => {
@@ -152,6 +160,61 @@ const App: React.FC = () => {
       message.success('Task uncompleted');
     } catch (error) {
       message.error('Failed to uncomplete task');
+    }
+  };
+
+  const handleAddIdea = async () => {
+    if (!ideaContent.trim()) {
+      message.error('Please enter an idea');
+      return;
+    }
+
+    try {
+      await db.ideas.add({
+        content: ideaContent,
+        createdAt: Date.now(),
+      });
+      setIdeaContent('');
+      message.success('Idea saved');
+    } catch (error) {
+      message.error('Failed to save idea');
+    }
+  };
+
+  const handleUpdateIdeaNotes = async (id: number) => {
+    try {
+      await db.ideas.update(id, { notes: tempNotes });
+      setEditingIdeaNotesId(null);
+      message.success('Notes updated');
+    } catch (error) {
+      message.error('Failed to update notes');
+    }
+  };
+
+  const handleCompleteIdea = async (id: number) => {
+    try {
+      await db.ideas.update(id, { completedAt: Date.now() });
+      message.success('Idea marked as complete');
+    } catch (error) {
+      message.error('Failed to complete idea');
+    }
+  };
+
+  const handleUncompleteIdea = async (id: number) => {
+    try {
+      await db.ideas.update(id, { completedAt: undefined });
+      message.success('Idea marked as active');
+    } catch (error) {
+      message.error('Failed to reactive idea');
+    }
+  };
+
+  const handleDeleteIdea = async (id: number) => {
+    try {
+      await db.ideas.delete(id);
+      message.success('Idea deleted');
+    } catch (error) {
+      message.error('Failed to delete idea');
     }
   };
   const startEditingTime = (task: Task) => {
@@ -369,117 +432,280 @@ const App: React.FC = () => {
             </Space>
           </div>
 
-          <Card className="flat-card" style={{ marginBottom: '32px' }}>
-            <Space direction="vertical" style={{ width: '100%' }} size="large">
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-                  <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                    PROJECT
-                  </Text>
-                  <Space size="middle">
-                    {selectedProjectId && !isAddingProject && !isRenamingProject && (
+          <Tabs
+            defaultActiveKey="1"
+            className="custom-tabs"
+            items={[
+              {
+                key: '1',
+                label: (
+                  <span>
+                    <ClockCircleOutlined />
+                    Tracker
+                  </span>
+                ),
+                children: (
+                  <>
+                    <Card className="flat-card" style={{ marginBottom: '32px' }}>
+                      <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+                            <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                              PROJECT
+                            </Text>
+                            <Space size="middle">
+                              {selectedProjectId && !isAddingProject && !isRenamingProject && (
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  onClick={() => {
+                                    const p = projects?.find(proj => proj.id === selectedProjectId);
+                                    if (p) {
+                                      setNewProjectName(p.name);
+                                      setIsRenamingProject(true);
+                                    }
+                                  }}
+                                  style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                                >
+                                  Rename Selected
+                                </Button>
+                              )}
+                              <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                  setIsAddingProject(!isAddingProject);
+                                  setIsRenamingProject(false);
+                                  setNewProjectName('');
+                                }}
+                                style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
+                              >
+                                {isAddingProject || isRenamingProject ? 'Cancel' : '+ New Project'}
+                              </Button>
+                            </Space>
+                          </div>
+
+                          {isAddingProject || isRenamingProject ? (
+                            <Input.Search
+                              placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
+                              enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
+                              value={newProjectName}
+                              onChange={(e) => setNewProjectName(e.target.value)}
+                              onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
+                              size="large"
+                            />
+                          ) : (
+                            <Space wrap size={[8, 8]}>
+                              {projects?.map((p: any) => (
+                                <Button
+                                  key={p.id}
+                                  type={selectedProjectId === p.id ? 'primary' : 'default'}
+                                  onClick={() => setSelectedProjectId(p.id)}
+                                  style={{
+                                    borderRadius: '8px',
+                                    background: selectedProjectId === p.id ? 'var(--primary-color)' : 'var(--bg-input)',
+                                    border: selectedProjectId === p.id ? 'none' : '1px solid var(--border-color)',
+                                    color: 'white'
+                                  }}
+                                >
+                                  {p.name}
+                                </Button>
+                              ))}
+                              {(!projects || projects.length === 0) && (
+                                <Text type="secondary" style={{ fontSize: '12px' }}>No projects yet. Create one!</Text>
+                              )}
+                            </Space>
+                          )}
+                        </div>
+
+                        <div>
+                          <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                            TASK NAME
+                          </Text>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <Input
+                              placeholder="What are you doing? (Press Enter to log)"
+                              value={taskName}
+                              onChange={(e) => setTaskName(e.target.value)}
+                              onPressEnter={handleAddTask}
+                              size="large"
+                              style={{ flex: 1 }}
+                              disabled={!selectedProjectId}
+                            />
+                          </div>
+                        </div>
+                      </Space>
+                    </Card>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
                       <Button
-                        type="link"
-                        size="small"
-                        onClick={() => {
-                          const p = projects?.find(proj => proj.id === selectedProjectId);
-                          if (p) {
-                            setNewProjectName(p.name);
-                            setIsRenamingProject(true);
-                          }
-                        }}
-                        style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                        icon={<DownloadOutlined />}
+                        onClick={exportToCSV}
+                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
                       >
-                        Rename Selected
+                        Export CSV
                       </Button>
-                    )}
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => {
-                        setIsAddingProject(!isAddingProject);
-                        setIsRenamingProject(false);
-                        setNewProjectName('');
-                      }}
-                      style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
-                    >
-                      {isAddingProject || isRenamingProject ? 'Cancel' : '+ New Project'}
-                    </Button>
-                  </Space>
-                </div>
+                    </div>
 
-                {isAddingProject || isRenamingProject ? (
-                  <Input.Search
-                    placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
-                    enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
-                    size="large"
-                  />
-                ) : (
-                  <Space wrap size={[8, 8]}>
-                    {projects?.map((p: any) => (
-                      <Button
-                        key={p.id}
-                        type={selectedProjectId === p.id ? 'primary' : 'default'}
-                        onClick={() => setSelectedProjectId(p.id)}
-                        style={{
-                          borderRadius: '8px',
-                          background: selectedProjectId === p.id ? 'var(--primary-color)' : 'var(--bg-input)',
-                          border: selectedProjectId === p.id ? 'none' : '1px solid var(--border-color)',
-                          color: 'white'
-                        }}
-                      >
-                        {p.name}
-                      </Button>
-                    ))}
-                    {(!projects || projects.length === 0) && (
-                      <Text type="secondary" style={{ fontSize: '12px' }}>No projects yet. Create one!</Text>
-                    )}
-                  </Space>
-                )}
-              </div>
+                    <Card className="flat-card" styles={{ body: { padding: 0 } }}>
+                      <Table
+                        dataSource={tasks}
+                        columns={columns}
+                        rowKey="id"
+                        pagination={{ pageSize: 15, position: ['bottomCenter'] }}
+                        locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>No logs found.</div> }}
+                      />
+                    </Card>
+                  </>
+                )
+              },
+              {
+                key: '2',
+                label: (
+                  <span>
+                    <BulbOutlined />
+                    Ideas
+                  </span>
+                ),
+                children: (
+                  <>
+                    <Card className="flat-card" style={{ marginBottom: '32px' }}>
+                      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                        <div>
+                          <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                            IDEA TITLE
+                          </Text>
+                          <Input
+                            placeholder="What's your idea? (Press Enter to save)"
+                            value={ideaContent}
+                            onChange={(e) => setIdeaContent(e.target.value)}
+                            onPressEnter={handleAddIdea}
+                            size="large"
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button type="primary" onClick={handleAddIdea} icon={<PlusOutlined />}>Save Idea</Button>
+                        </div>
+                      </Space>
+                    </Card>
 
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                  TASK NAME
-                </Text>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Input
-                    placeholder="What are you doing? (Press Enter to log)"
-                    value={taskName}
-                    onChange={(e) => setTaskName(e.target.value)}
-                    onPressEnter={handleAddTask}
-                    size="large"
-                    style={{ flex: 1 }}
-                    disabled={!selectedProjectId}
-                  />
-                </div>
-              </div>
-            </Space>
-          </Card>
+                    <Title level={4} style={{ marginBottom: '16px', color: 'var(--text-main)', fontWeight: 600 }}>Stored Ideas</Title>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={exportToCSV}
-              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-            >
-              Export CSV
-            </Button>
-          </div>
-
-          <Card className="flat-card" styles={{ body: { padding: 0 } }}>
-            <Table
-              dataSource={tasks}
-              columns={columns}
-              rowKey="id"
-              pagination={{ pageSize: 15, position: ['bottomCenter'] }}
-              locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>No logs found.</div> }}
-            />
-          </Card>
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      {ideas?.map((idea: Idea) => (
+                        <Card
+                          key={idea.id}
+                          className="flat-card"
+                          size="small"
+                          style={{
+                            position: 'relative',
+                            opacity: idea.completedAt ? 0.6 : 1,
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1, paddingRight: '24px' }}>
+                              <Text style={{
+                                color: 'var(--text-main)',
+                                fontSize: '16px',
+                                fontWeight: 600,
+                                textDecoration: idea.completedAt ? 'line-through' : 'none'
+                              }}>
+                                {idea.content}
+                              </Text>
+                              {editingIdeaNotesId === idea.id ? (
+                                <div style={{ marginTop: '12px' }}>
+                                  <Input.TextArea
+                                    autoFocus
+                                    placeholder="Add notes..."
+                                    value={tempNotes}
+                                    onChange={(e) => setTempNotes(e.target.value)}
+                                    autoSize={{ minRows: 2, maxRows: 4 }}
+                                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--primary-color)' }}
+                                  />
+                                  <Space style={{ marginTop: '8px' }}>
+                                    <Button size="small" type="primary" onClick={() => handleUpdateIdeaNotes(idea.id!)}>Save Notes</Button>
+                                    <Button size="small" type="text" onClick={() => setEditingIdeaNotesId(null)} style={{ color: 'var(--text-muted)' }}>Cancel</Button>
+                                  </Space>
+                                </div>
+                              ) : (
+                                <div style={{ marginTop: '8px' }}>
+                                  {idea.notes ? (
+                                    <div
+                                      onClick={() => {
+                                        setEditingIdeaNotesId(idea.id!);
+                                        setTempNotes(idea.notes || '');
+                                      }}
+                                      style={{ cursor: 'pointer' }}
+                                    >
+                                      <Text style={{ color: 'var(--text-muted)', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+                                        {idea.notes}
+                                      </Text>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      icon={<EditOutlined />}
+                                      onClick={() => {
+                                        setEditingIdeaNotesId(idea.id!);
+                                        setTempNotes('');
+                                      }}
+                                      style={{ padding: 0, height: 'auto', fontSize: '12px' }}
+                                    >
+                                      Add Notes
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                              <div style={{ marginTop: '12px' }}>
+                                <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Created {dayjs(idea.createdAt).format('MMM DD · HH:mm')}
+                                </Text>
+                              </div>
+                            </div>
+                            <Space>
+                              {idea.completedAt ? (
+                                <Button
+                                  type="text"
+                                  icon={<UndoOutlined />}
+                                  onClick={() => handleUncompleteIdea(idea.id!)}
+                                  className="action-btn"
+                                />
+                              ) : (
+                                <Button
+                                  type="text"
+                                  icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
+                                  onClick={() => handleCompleteIdea(idea.id!)}
+                                  className="action-btn"
+                                />
+                              )}
+                              <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDeleteIdea(idea.id!)}
+                                className="action-btn"
+                              />
+                            </Space>
+                          </div>
+                        </Card>
+                      ))}
+                      {(!ideas || ideas.length === 0) && (
+                        <Card className="flat-card">
+                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            No ideas yet. Capture your first one above!
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  </>
+                )
+              }
+            ]}
+          />
         </Content>
       </Layout>
     </ConfigProvider>
