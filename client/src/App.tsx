@@ -60,21 +60,7 @@ const formatDate = (ts: Timestamp | number | undefined, format: string) => {
   return dayjs(date).format(format);
 };
 
-const FAKE_PROJECTS: Project[] = [
-  { id: 'p1', name: 'Development', createdAt: Date.now() },
-  { id: 'p2', name: 'Personal', createdAt: Date.now() - 86400000 },
-];
-
-const FAKE_TASKS: Task[] = [
-  { id: 't1', projectId: 'p1', name: 'Migration to Firebase', timestamp: Date.now() - 3600000, completedAt: Date.now() - 3000000, duration: 600000 },
-  { id: 't2', projectId: 'p2', name: 'Workout session', timestamp: Date.now() - 7200000 },
-  { id: 't3', projectId: 'p1', name: 'Code review', timestamp: Date.now() - 10000000 },
-];
-
-const FAKE_IDEAS: Idea[] = [
-  { id: 'i1', content: 'Add dark mode theme', createdAt: Date.now() - 172800000, notes: 'Follow system settings if possible.' },
-  { id: 'i2', content: 'Mobile app version', createdAt: Date.now() - 250000000 },
-];
+// No static fake data anymore, using state for dynamic demo
 
 const App: React.FC = () => {
   const [user] = useAuthState(auth);
@@ -92,13 +78,30 @@ const App: React.FC = () => {
   const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState('');
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [currentTourStep, setCurrentTourStep] = useState(0);
+
+  // Demo state for Tutorial
+  const [demoProjects, setDemoProjects] = useState<Project[]>([]);
+  const [demoTasks, setDemoTasks] = useState<Task[]>([]);
+  const [demoIdeas, setDemoIdeas] = useState<Idea[]>([]);
+  const [activeTab, setActiveTab] = useState('1');
 
   const tourRefs = {
     projects: React.useRef<HTMLDivElement>(null),
+    projectsTitle: React.useRef<HTMLDivElement>(null),
     history: React.useRef<HTMLDivElement>(null),
     ideas: React.useRef<HTMLDivElement>(null),
     login: React.useRef<any>(null),
     nowButton: React.useRef<any>(null),
+    complete: React.useRef<any>(null),
+    ideaInput: React.useRef<any>(null),
+    ideaStore: React.useRef<HTMLDivElement>(null),
+    ideaNoteBtn: React.useRef<any>(null),
+    pencil: React.useRef<any>(null),
+    eduAlert: React.useRef<HTMLDivElement>(null),
+    rename: React.useRef<any>(null),
+    export: React.useRef<any>(null),
+    deleteRow: React.useRef<any>(null),
   };
 
   const [projectsSnapshot, loadingProjects, errorProjects] = useCollection(
@@ -106,14 +109,14 @@ const App: React.FC = () => {
   );
   const projects = user
     ? projectsSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project))
-    : FAKE_PROJECTS;
+    : demoProjects;
 
   const [tasksSnapshot, loadingTasks, errorTasks] = useCollection(
     user ? query(collection(db, 'tasks'), orderBy('timestamp', 'desc')) : null
   );
   const tasks = user
     ? tasksSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task))
-    : FAKE_TASKS;
+    : demoTasks;
 
   const [ideasSnapshotRaw, loadingIdeas, errorIdeas] = useCollection(
     query(collection(db, 'ideas'), orderBy('createdAt', 'desc'))
@@ -121,7 +124,7 @@ const App: React.FC = () => {
   const ideasSnapshot = ideasSnapshotRaw as { docs: { data: () => Idea; id: string }[] } | undefined;
   const ideas = user
     ? ideasSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Idea))
-    : FAKE_IDEAS;
+    : demoIdeas;
 
   // Show errors from firebase
   useEffect(() => {
@@ -138,36 +141,115 @@ const App: React.FC = () => {
 
   const tourSteps: TourProps['steps'] = [
     {
-      title: 'Welcome to Time Logg!',
-      description: 'Let us show you around. This is a demo mode since you are not logged in.',
-      target: () => tourRefs.projects.current!,
+      title: 'Welcome',
+      description: 'You are in educational mode. Features unlock as you go.',
+      target: () => tourRefs.eduAlert.current,
     },
     {
-      title: 'Log Your Work',
-      description: 'Select a project and type what you are doing. Click "Log" to start the timer.',
-      target: () => tourRefs.projects.current!,
+      title: 'Projects',
+      description: 'Group your work into project categories.',
+      target: () => tourRefs.projectsTitle.current,
     },
     {
-      title: 'Update Start Time',
-      description: 'Forgot to start? Click "Now" to reset the start time to the current moment.',
-      target: () => tourRefs.nowButton.current!,
+      title: 'Log Task',
+      description: 'Enter what you are doing and click Log to start tracking.',
+      target: () => tourRefs.projects.current,
     },
     {
-      title: 'Track Your History',
-      description: 'See all your logged tasks here. You can edit times or mark them as complete.',
-      target: () => tourRefs.history.current!,
+      title: 'History',
+      description: 'See every session you have logged in a clean timeline.',
+      target: () => tourRefs.history.current,
     },
     {
-      title: 'Capture Ideas',
-      description: 'Switch to the Ideas tab to store quick notes and future project thoughts.',
-      target: () => tourRefs.ideas.current!,
+      title: 'Edit Time',
+      description: 'Click the pencil to manually adjust timestamps if needed.',
+      target: () => tourRefs.pencil.current,
     },
     {
-      title: 'Save Permanently',
-      description: 'Data in demo mode is not saved. Login with your Google account to sync your logs across devices.',
-      target: () => tourRefs.login.current!,
+      title: 'Sync Time',
+      description: 'Hit "Now" to reset the start time to the current moment.',
+      target: () => tourRefs.nowButton.current,
+    },
+    {
+      title: 'Finish Task',
+      description: 'Click "Complete" to stop the timer and save the session.',
+      target: () => tourRefs.complete.current,
+    },
+    {
+      title: 'Delete Task',
+      description: 'Remove mistakes or old entries with a single click.',
+      target: () => tourRefs.deleteRow.current,
+    },
+    {
+      title: 'Export',
+      description: 'Download your entire time history as a CSV file.',
+      target: () => tourRefs.export.current,
+    },
+    {
+      title: 'Rename',
+      description: 'Click to change project names whenever you need to.',
+      target: () => tourRefs.rename.current,
+    },
+    {
+      title: 'Explore Ideas',
+      description: 'Switch to the Ideas tab to store quick notes and future plans.',
+      target: () => tourRefs.ideas.current,
+    },
+    {
+      title: 'Quick Capture',
+      description: 'Jot down business ideas or future tasks here.',
+      target: () => tourRefs.ideaInput.current,
+    },
+    {
+      title: 'Idea Log',
+      description: 'Your stored ideas appear here in a clean list.',
+      target: () => tourRefs.ideaStore.current,
+    },
+    {
+      title: 'Add Detail',
+      description: 'Expand any idea with detailed notes and plans.',
+      target: () => tourRefs.ideaNoteBtn.current,
+    },
+    {
+      title: 'Save Data',
+      description: 'Login with Google to sync your logs across all devices.',
+      target: () => tourRefs.login.current,
     },
   ];
+
+  const handleTourChange = (current: number) => {
+    setCurrentTourStep(current);
+
+    // Tab Management
+    if (current >= 11 && current <= 13) {
+      setActiveTab('2'); // Ideas content
+    } else {
+      setActiveTab('1'); // Tracker
+    }
+
+    // Demo Data Management (Cumulative)
+    const newDemoProjects = current >= 1 ? [{ id: 'demo-p1', name: (current >= 9 ? 'Work' : 'Personal'), createdAt: Date.now() }] : [];
+    const newDemoTasks = (current >= 2 && current <= 9) ? [{ id: 'demo-t1', projectId: 'demo-p1', name: 'UI Design', timestamp: Date.now() - 3600000 }] : [];
+    const newDemoIdeas = (current >= 11 && current <= 13) ? [{ id: 'demo-i1', content: 'New App Concept', createdAt: Date.now() }] : [];
+
+    setDemoProjects(newDemoProjects);
+    setDemoTasks(newDemoTasks);
+    setDemoIdeas(newDemoIdeas);
+
+    if (newDemoProjects.length > 0) {
+      setSelectedProjectId('demo-p1');
+    } else {
+      setSelectedProjectId(undefined);
+    }
+  };
+
+  const startTutorial = () => {
+    setDemoProjects([]);
+    setDemoTasks([]);
+    setDemoIdeas([]);
+    setCurrentTourStep(0);
+    setIsTourOpen(true);
+  };
 
   const handleLogin = async () => {
     try {
@@ -530,9 +612,12 @@ const App: React.FC = () => {
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 {formatDate(ts, 'MMM DD')}
               </Text>
-              <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
+              <span ref={record.id === 'demo-t1' ? tourRefs.pencil : undefined}>
+                <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
+              </span>
             </Space>
             <Button
+              ref={record.id === 'demo-t1' ? tourRefs.nowButton : undefined}
               type="text"
               size="small"
               icon={<ClockCircleOutlined />}
@@ -635,7 +720,7 @@ const App: React.FC = () => {
             ) : (
               <Space>
                 <Button
-                  ref={record.id === 't2' ? tourRefs.nowButton : undefined}
+                  ref={record.id === 'demo-t1' ? tourRefs.complete : undefined}
                   type="text"
                   size="small"
                   icon={<CheckCircleOutlined />}
@@ -656,6 +741,7 @@ const App: React.FC = () => {
       width: '60px',
       render: (_: unknown, record: Task) => (
         <Button
+          ref={record.id === 'demo-t1' ? tourRefs.deleteRow : undefined}
           type="text"
           danger
           icon={<DeleteOutlined />}
@@ -726,319 +812,362 @@ const App: React.FC = () => {
             </Space>
           </div>
 
-          <Tabs
-            defaultActiveKey="1"
-            className="custom-tabs"
-            items={[
-              {
-                key: '1',
-                label: (
-                  <span>
-                    <ClockCircleOutlined />
-                    Tracker
-                  </span>
-                ),
-                children: (
-                  <>
-                    {!user && (
-                      <Alert
-                        message="Welcome to Time Logg Demo!"
-                        description="Explore the features with dummy data. Login to save your own tasks permanently."
-                        type="info"
-                        showIcon
-                        action={
-                          <Button size="small" type="primary" onClick={() => setIsTourOpen(true)}>
-                            Start Tutorial
-                          </Button>
-                        }
-                        style={{ marginBottom: '24px', borderRadius: '12px', border: '1px solid var(--primary-color)', background: 'rgba(37, 99, 235, 0.1)' }}
-                      />
-                    )}
-                    <Card ref={tourRefs.projects} className="flat-card" style={{ marginBottom: '32px' }}>
-                      <Space direction="vertical" style={{ width: '100%' }} size="large">
-                        <div id="project-section">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-                            <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                              PROJECTS & LOGGING
-                            </Text>
-                            <Space size="middle">
-                              {selectedProjectId && !isAddingProject && !isRenamingProject && (
+          {!user && !isTourOpen ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', animation: 'fadeIn 0.8s ease-out' }}>
+              <div style={{ marginBottom: '40px' }}>
+                <Title style={{ color: 'var(--text-main)', fontSize: '48px', fontWeight: 800, marginBottom: '16px', letterSpacing: '-1px' }}>
+                  Master Your Time <br /> <span style={{ color: 'var(--primary-color)' }}>Without the Clutter.</span>
+                </Title>
+                <Text style={{ color: 'var(--text-muted)', fontSize: '18px', maxWidth: '600px', display: 'inline-block', lineHeight: 1.6 }}>
+                  Stop guessing where your day went. Time Logg provides a minimalist, high-speed interface to log projects, track deep work, and capture future ideas effortlessly.
+                </Text>
+              </div>
+
+              <Space size="large" direction="vertical">
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={startTutorial}
+                  className="primary-button"
+                  style={{ width: '280px', height: '60px !important', fontSize: '18px' }}
+                >
+                  Start Interactive Tutorial
+                </Button>
+                <div>
+                  <Text style={{ color: 'var(--text-muted)' }}>or </Text>
+                  <Button type="link" onClick={handleLogin} style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
+                    Login with Google to start logging
+                  </Button>
+                </div>
+              </Space>
+            </div>
+          ) : (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              className="custom-tabs"
+              items={[
+                {
+                  key: '1',
+                  label: (
+                    <span>
+                      <ClockCircleOutlined />
+                      Tracker
+                    </span>
+                  ),
+                  children: (
+                    <>
+                      {isTourOpen && (
+                        <div ref={tourRefs.eduAlert}>
+                          <Alert
+                            message="Active Educational Mode"
+                            description="You are exploring Time Logg. Features are being unlocked as you progress through the tour steps."
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: '24px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.05)', border: '1px solid rgba(37, 99, 235, 0.2)' }}
+                          />
+                        </div>
+                      )}
+                      <Card ref={tourRefs.projects} className="flat-card" style={{ marginBottom: '32px' }}>
+                        <Space direction="vertical" style={{ width: '100%' }} size="large">
+                          <div id="project-section">
+                            <div ref={tourRefs.projectsTitle} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+                              <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                                PROJECTS & LOGGING
+                              </Text>
+                              <Space size="middle">
+                                {selectedProjectId && !isAddingProject && !isRenamingProject && (
+                                  <Button
+                                    ref={tourRefs.rename}
+                                    type="link"
+                                    size="small"
+                                    onClick={() => {
+                                      const p = projects?.find(proj => proj.id === selectedProjectId);
+                                      if (p) {
+                                        setNewProjectName(p.name);
+                                        setIsRenamingProject(true);
+                                      }
+                                    }}
+                                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                                  >
+                                    Rename Selected
+                                  </Button>
+                                )}
                                 <Button
                                   type="link"
                                   size="small"
                                   onClick={() => {
-                                    const p = projects?.find(proj => proj.id === selectedProjectId);
-                                    if (p) {
-                                      setNewProjectName(p.name);
-                                      setIsRenamingProject(true);
-                                    }
+                                    setIsAddingProject(!isAddingProject);
+                                    setIsRenamingProject(false);
+                                    setNewProjectName('');
                                   }}
-                                  style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                                  style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
                                 >
-                                  Rename Selected
+                                  {isAddingProject || isRenamingProject ? 'Cancel' : '+ New Project'}
                                 </Button>
-                              )}
-                              <Button
-                                type="link"
-                                size="small"
-                                onClick={() => {
-                                  setIsAddingProject(!isAddingProject);
-                                  setIsRenamingProject(false);
-                                  setNewProjectName('');
-                                }}
-                                style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
-                              >
-                                {isAddingProject || isRenamingProject ? 'Cancel' : '+ New Project'}
-                              </Button>
-                            </Space>
-                          </div>
-
-                          {isAddingProject || isRenamingProject ? (
-                            <Input.Search
-                              placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
-                              enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
-                              value={newProjectName}
-                              onChange={(e) => setNewProjectName(e.target.value)}
-                              onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
-                              size="large"
-                            />
-                          ) : (
-                            <div style={{ display: 'grid', gap: '12px' }}>
-                              {projects?.map((p: Project) => (
-                                <div
-                                  key={p.id}
-                                  style={{
-                                    display: 'flex',
-                                    gap: '12px',
-                                    alignItems: 'center',
-                                    padding: '8px 12px',
-                                    background: 'var(--bg-input)',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border-color)'
-                                  }}
-                                >
-                                  <div style={{ minWidth: '100px', flexShrink: 0 }}>
-                                    <Text
-                                      strong
-                                      style={{
-                                        color: 'var(--text-main)',
-                                        cursor: 'pointer',
-                                        textDecoration: selectedProjectId === p.id ? 'underline' : 'none'
-                                      }}
-                                      onClick={() => setSelectedProjectId(p.id)}
-                                    >
-                                      {p.name}
-                                    </Text>
-                                  </div>
-                                  <Input
-                                    placeholder="What are you doing?"
-                                    variant="borderless"
-                                    value={projectTaskNames[p.id] || ''}
-                                    onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                    onPressEnter={() => handleAddTask(p.id)}
-                                    style={{ color: 'var(--text-main)' }}
-                                  />
-                                  <Button
-                                    type="primary"
-                                    size="small"
-                                    onClick={() => handleAddTask(p.id)}
-                                    disabled={!user}
-                                    style={{ borderRadius: '6px' }}
-                                  >
-                                    Log
-                                  </Button>
-                                </div>
-                              ))}
-                              {(!projects || projects.length === 0) && (
-                                <Text type="secondary" style={{ fontSize: '12px' }}>
-                                  {loadingProjects ? 'Loading projects...' : 'No projects yet. Create one!'}
-                                </Text>
-                              )}
+                              </Space>
                             </div>
-                          )}
-                        </div>
-                      </Space>
-                    </Card>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
-                      <Button
-                        icon={<DownloadOutlined />}
-                        onClick={exportToCSV}
-                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                      >
-                        Export CSV
-                      </Button>
-                    </div>
-
-                    <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
-                      <Table
-                        dataSource={tasks}
-                        columns={columns}
-                        rowKey="id"
-                        loading={loadingTasks}
-                        pagination={{ pageSize: 15, position: ['bottomCenter'] }}
-                        locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>{loadingTasks ? 'Loading logs...' : 'No logs found.'}</div> }}
-                      />
-                    </Card>
-                  </>
-                )
-              },
-              {
-                key: '2',
-                label: (
-                  <span ref={tourRefs.ideas}>
-                    <BulbOutlined />
-                    Ideas
-                  </span>
-                ),
-                children: (
-                  <>
-                    <Card className="flat-card" style={{ marginBottom: '32px' }}>
-                      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                        <div>
-                          <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                            IDEA TITLE
-                          </Text>
-                          <Input
-                            placeholder="What's your idea? (Press Enter to save)"
-                            value={ideaContent}
-                            onChange={(e) => setIdeaContent(e.target.value)}
-                            onPressEnter={handleAddIdea}
-                            size="large"
-                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <Button type="primary" onClick={handleAddIdea} icon={<PlusOutlined />}>Save Idea</Button>
-                        </div>
-                      </Space>
-                    </Card>
-
-                    <Title level={4} style={{ marginBottom: '16px', color: 'var(--text-main)', fontWeight: 600 }}>Stored Ideas</Title>
-
-                    <div style={{ display: 'grid', gap: '16px' }}>
-                      {loadingIdeas && (
-                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          Loading ideas...
-                        </div>
-                      )}
-                      {ideas?.map((idea: Idea) => (
-                        <Card
-                          key={idea.id}
-                          className="flat-card"
-                          size="small"
-                          style={{
-                            position: 'relative',
-                            opacity: idea.completedAt ? 0.6 : 1,
-                            transition: 'all 0.3s ease'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div style={{ flex: 1, paddingRight: '24px' }}>
-                              <Text style={{
-                                color: 'var(--text-main)',
-                                fontSize: '16px',
-                                fontWeight: 600,
-                                textDecoration: idea.completedAt ? 'line-through' : 'none'
-                              }}>
-                                {idea.content}
-                              </Text>
-                              {editingIdeaNotesId === idea.id ? (
-                                <div style={{ marginTop: '12px' }}>
-                                  <Input.TextArea
-                                    autoFocus
-                                    placeholder="Add notes..."
-                                    value={tempNotes}
-                                    onChange={(e) => setTempNotes(e.target.value)}
-                                    autoSize={{ minRows: 2, maxRows: 4 }}
-                                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--primary-color)' }}
-                                  />
-                                  <Space style={{ marginTop: '8px' }}>
-                                    <Button size="small" type="primary" onClick={() => handleUpdateIdeaNotes(idea.id)}>Save Notes</Button>
-                                    <Button size="small" type="text" onClick={() => setEditingIdeaNotesId(null)} style={{ color: 'var(--text-muted)' }}>Cancel</Button>
-                                  </Space>
-                                </div>
-                              ) : (
-                                <div style={{ marginTop: '8px' }}>
-                                  {idea.notes ? (
-                                    <div
-                                      onClick={() => {
-                                        setEditingIdeaNotesId(idea.id);
-                                        setTempNotes(idea.notes || '');
-                                      }}
-                                      style={{ cursor: 'pointer' }}
-                                    >
-                                      <Text style={{ color: 'var(--text-muted)', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
-                                        {idea.notes}
+                            {isAddingProject || isRenamingProject ? (
+                              <Input.Search
+                                placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
+                                enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
+                                value={isRenamingProject ? newProjectName : ''}
+                                onChange={(e) => setNewProjectName(e.target.value)}
+                                onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
+                                size="large"
+                              />
+                            ) : (
+                              <div id="project-section" style={{ display: 'grid', gap: '12px' }}>
+                                {projects?.map((p: Project) => (
+                                  <div
+                                    key={p.id}
+                                    style={{
+                                      display: 'flex',
+                                      gap: '12px',
+                                      alignItems: 'center',
+                                      padding: '8px 12px',
+                                      background: 'var(--bg-input)',
+                                      borderRadius: '8px',
+                                      border: '1px solid var(--border-color)'
+                                    }}
+                                  >
+                                    <div style={{ minWidth: '100px', flexShrink: 0 }}>
+                                      <Text
+                                        strong
+                                        style={{
+                                          color: 'var(--text-main)',
+                                          cursor: 'pointer',
+                                          textDecoration: selectedProjectId === p.id ? 'underline' : 'none'
+                                        }}
+                                        onClick={() => setSelectedProjectId(p.id)}
+                                      >
+                                        {p.name}
                                       </Text>
                                     </div>
-                                  ) : (
+                                    <Input
+                                      placeholder="What are you doing?"
+                                      variant="borderless"
+                                      value={projectTaskNames[p.id] || ''}
+                                      onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                      onPressEnter={() => handleAddTask(p.id)}
+                                      style={{ color: 'var(--text-main)' }}
+                                    />
                                     <Button
-                                      type="link"
+                                      type="primary"
                                       size="small"
-                                      icon={<EditOutlined />}
-                                      onClick={() => {
-                                        setEditingIdeaNotesId(idea.id);
-                                        setTempNotes('');
+                                      onClick={() => handleAddTask(p.id)}
+                                      disabled={!user && !isTourOpen}
+                                      style={{
+                                        borderRadius: '6px',
+                                        background: (isTourOpen || user) ? 'var(--primary-color)' : 'var(--bg-card)',
+                                        borderColor: (isTourOpen || user) ? 'var(--primary-color)' : 'var(--border-color)'
                                       }}
-                                      style={{ padding: 0, height: 'auto', fontSize: '12px' }}
                                     >
-                                      Add Notes
+                                      Log
                                     </Button>
-                                  )}
-                                </div>
-                              )}
-                              <div style={{ marginTop: '12px' }}>
-                                <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                  Created {formatDate(idea.createdAt, 'MMM DD · HH:mm')}
-                                </Text>
+                                  </div>
+                                ))}
+                                {(!projects || projects.length === 0) && (
+                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {loadingProjects ? 'Loading projects...' : 'No projects yet. Create one!'}
+                                  </Text>
+                                )}
                               </div>
-                            </div>
-                            <Space>
-                              {idea.completedAt ? (
-                                <Button
-                                  type="text"
-                                  icon={<UndoOutlined />}
-                                  onClick={() => handleUncompleteIdea(idea.id)}
-                                  className="action-btn"
-                                />
-                              ) : (
-                                <Button
-                                  type="text"
-                                  icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-                                  onClick={() => handleCompleteIdea(idea.id)}
-                                  className="action-btn"
-                                />
-                              )}
-                              <Button
-                                type="text"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDeleteIdea(idea.id)}
-                                className="action-btn"
-                              />
-                            </Space>
+                            )}
                           </div>
-                        </Card>
-                      ))}
-                      {(!loadingIdeas && (!ideas || ideas.length === 0)) && (
-                        <Card className="flat-card">
-                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            No ideas yet. Capture your first one above!
+                        </Space>
+                      </Card>
+
+                      {(user || (isTourOpen && currentTourStep >= 2)) && (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
+                            <Button
+                              ref={tourRefs.export}
+                              icon={<DownloadOutlined />}
+                              onClick={exportToCSV}
+                              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                            >
+                              Export CSV
+                            </Button>
                           </div>
-                        </Card>
+
+                          <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
+                            <Table
+                              dataSource={tasks}
+                              columns={columns}
+                              rowKey="id"
+                              loading={loadingTasks && !!user}
+                              pagination={{ pageSize: 15, position: ['bottomCenter'] }}
+                              locale={{ emptyText: <div style={{ padding: '40px', color: 'var(--text-muted)' }}>{loadingTasks ? 'Loading logs...' : 'No logs found.'}</div> }}
+                            />
+                          </Card>
+                        </>
                       )}
-                    </div>
-                  </>
-                )
-              }
-            ]}
-          />
+                    </>
+                  )
+                },
+                (user || (isTourOpen && currentTourStep >= 8)) ? {
+                  key: '2',
+                  label: (
+                    <span ref={tourRefs.ideas}>
+                      <BulbOutlined />
+                      Ideas
+                    </span>
+                  ),
+                  children: (
+                    <>
+                      <Card ref={tourRefs.ideaInput} className="flat-card" style={{ marginBottom: '32px' }}>
+                        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                          <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                              IDEA TITLE
+                            </Text>
+                            <Input
+                              placeholder="What's your idea? (Press Enter to save)"
+                              value={ideaContent}
+                              onChange={(e) => setIdeaContent(e.target.value)}
+                              onPressEnter={handleAddIdea}
+                              size="large"
+                              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <Button type="primary" onClick={handleAddIdea} icon={<PlusOutlined />}>Save Idea</Button>
+                          </div>
+                        </Space>
+                      </Card>
+
+                      <Title level={4} style={{ marginBottom: '16px', color: 'var(--text-main)', fontWeight: 600 }}>Stored Ideas</Title>
+
+                      <div ref={tourRefs.ideaStore} style={{ display: 'grid', gap: '16px' }}>
+                        {loadingIdeas && !!user && (
+                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            Loading ideas...
+                          </div>
+                        )}
+                        {ideas?.map((idea: Idea) => (
+                          <Card
+                            key={idea.id}
+                            className="flat-card"
+                            size="small"
+                            style={{
+                              position: 'relative',
+                              opacity: idea.completedAt ? 0.6 : 1,
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div style={{ flex: 1, paddingRight: '24px' }}>
+                                <Text style={{
+                                  color: 'var(--text-main)',
+                                  fontSize: '16px',
+                                  fontWeight: 600,
+                                  textDecoration: idea.completedAt ? 'line-through' : 'none'
+                                }}>
+                                  {idea.content}
+                                </Text>
+                                {editingIdeaNotesId === idea.id ? (
+                                  <div style={{ marginTop: '12px' }}>
+                                    <Input.TextArea
+                                      autoFocus
+                                      placeholder="Add notes..."
+                                      value={tempNotes}
+                                      onChange={(e) => setTempNotes(e.target.value)}
+                                      autoSize={{ minRows: 2, maxRows: 4 }}
+                                      style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--primary-color)' }}
+                                    />
+                                    <Space style={{ marginTop: '8px' }}>
+                                      <Button size="small" type="primary" onClick={() => handleUpdateIdeaNotes(idea.id)}>Save Notes</Button>
+                                      <Button size="small" type="text" onClick={() => setEditingIdeaNotesId(null)} style={{ color: 'var(--text-muted)' }}>Cancel</Button>
+                                    </Space>
+                                  </div>
+                                ) : (
+                                  <div style={{ marginTop: '8px' }}>
+                                    {idea.notes ? (
+                                      <div
+                                        onClick={() => {
+                                          setEditingIdeaNotesId(idea.id);
+                                          setTempNotes(idea.notes || '');
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                      >
+                                        <Text style={{ color: 'var(--text-muted)', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+                                          {idea.notes}
+                                        </Text>
+                                      </div>
+                                    ) : (
+                                      <span ref={idea.id === 'demo-i1' ? tourRefs.ideaNoteBtn : undefined}>
+                                        <Button
+                                          type="link"
+                                          size="small"
+                                          icon={<EditOutlined />}
+                                          onClick={() => {
+                                            setEditingIdeaNotesId(idea.id);
+                                            setTempNotes('');
+                                          }}
+                                          style={{ padding: 0, height: 'auto', fontSize: '12px' }}
+                                        >
+                                          Add Notes
+                                        </Button>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                <div style={{ marginTop: '12px' }}>
+                                  <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Created {formatDate(idea.createdAt, 'MMM DD · HH:mm')}
+                                  </Text>
+                                </div>
+                              </div>
+                              <Space>
+                                {idea.completedAt ? (
+                                  <Button
+                                    type="text"
+                                    icon={<UndoOutlined />}
+                                    onClick={() => handleUncompleteIdea(idea.id)}
+                                    className="action-btn"
+                                  />
+                                ) : (
+                                  <Button
+                                    type="text"
+                                    icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
+                                    onClick={() => handleCompleteIdea(idea.id)}
+                                    className="action-btn"
+                                  />
+                                )}
+                                <Button
+                                  type="text"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => handleDeleteIdea(idea.id)}
+                                  className="action-btn"
+                                />
+                              </Space>
+                            </div>
+                          </Card>
+                        ))}
+                        {(!loadingIdeas && (!ideas || ideas.length === 0)) && (
+                          <Card className="flat-card">
+                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              No ideas yet. Capture your first one above!
+                            </div>
+                          </Card>
+                        )}
+                      </div>
+                    </>
+                  )
+                } : null
+              ].filter(Boolean) as any}
+            />
+          )}
         </Content>
         <Tour
           open={isTourOpen}
+          current={currentTourStep}
           onClose={() => setIsTourOpen(false)}
+          onChange={handleTourChange}
           steps={tourSteps}
           mask={{
             color: 'rgba(0, 0, 0, 0.85)',
