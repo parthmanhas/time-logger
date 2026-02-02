@@ -5,6 +5,8 @@ export type FirestoreDate = Timestamp | number;
 export interface Project {
     id: string;
     name: string;
+    description?: string;
+    isFocused?: boolean;
     createdAt: FirestoreDate;
 }
 

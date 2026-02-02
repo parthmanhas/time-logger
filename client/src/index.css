@@ -108,7 +108,7 @@ body {
   background-color: var(--bg-input) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-main) !important;
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 .ant-input::placeholder {
@@ -198,6 +198,17 @@ body {
 
 .fade-in {
   animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* Compact Group Overrides */
+.ant-space-compact-item.ant-input {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.ant-space-compact-item.ant-btn {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
 }
 
 /* Tutorial Highlighting */

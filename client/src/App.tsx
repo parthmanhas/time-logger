@@ -14,7 +14,8 @@ import {
   Select,
   Tabs,
   Tour,
-  Alert
+  Alert,
+  Tooltip
 } from 'antd';
 import type { TourProps } from 'antd';
 import {
@@ -30,7 +31,13 @@ import {
   BulbOutlined,
   GoogleOutlined,
   LogoutOutlined,
-  UserOutlined
+  UserOutlined,
+  RocketOutlined,
+  InfoCircleOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  PushpinOutlined,
+  PushpinFilled
 } from '@ant-design/icons';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -68,11 +75,12 @@ const App: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [isRenamingProject, setIsRenamingProject] = useState(false);
 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | null>(null);
-  const [editingTime, setEditingTime] = useState<string>('');
+  const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | 'name' | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
   const [currentTheme, setCurrentTheme] = useState<string>('default');
   const [ideaContent, setIdeaContent] = useState('');
   const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
@@ -102,6 +110,7 @@ const App: React.FC = () => {
     rename: React.useRef<any>(null),
     export: React.useRef<any>(null),
     deleteRow: React.useRef<any>(null),
+    rocketBtn: React.useRef<any>(null),
   };
 
   const [projectsSnapshot, loadingProjects, errorProjects] = useCollection(
@@ -211,6 +220,11 @@ const App: React.FC = () => {
       target: () => tourRefs.ideaNoteBtn.current,
     },
     {
+      title: 'Project Conversion',
+      description: 'Liking an idea? Turn it into a real project with one click.',
+      target: () => tourRefs.rocketBtn.current,
+    },
+    {
       title: 'Save Data',
       description: 'Login with Google to sync your logs across all devices.',
       target: () => tourRefs.login.current,
@@ -221,7 +235,7 @@ const App: React.FC = () => {
     setCurrentTourStep(current);
 
     // Tab Management
-    if (current >= 11 && current <= 13) {
+    if (current >= 11 && current <= 14) {
       setActiveTab('2'); // Ideas content
     } else {
       setActiveTab('1'); // Tracker
@@ -230,7 +244,7 @@ const App: React.FC = () => {
     // Demo Data Management (Cumulative)
     const newDemoProjects = current >= 1 ? [{ id: 'demo-p1', name: (current >= 9 ? 'Work' : 'Personal'), createdAt: Date.now() }] : [];
     const newDemoTasks = (current >= 2 && current <= 9) ? [{ id: 'demo-t1', projectId: 'demo-p1', name: 'UI Design', timestamp: Date.now() - 3600000 }] : [];
-    const newDemoIdeas = (current >= 11 && current <= 13) ? [{ id: 'demo-i1', content: 'New App Concept', createdAt: Date.now() }] : [];
+    const newDemoIdeas = (current >= 11 && current <= 14) ? [{ id: 'demo-i1', content: 'New App Concept', createdAt: Date.now() }] : [];
 
     setDemoProjects(newDemoProjects);
     setDemoTasks(newDemoTasks);
@@ -332,6 +346,15 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleProjectFocus = async (id: string, isFocused: boolean) => {
+    try {
+      await updateDoc(doc(db, 'projects', id), { isFocused: !isFocused });
+    } catch (error) {
+      console.error('Error toggling project focus:', error);
+      message.error('Failed to update focus status');
+    }
+  };
+
   const handleRenameProject = async () => {
     if (!newProjectName.trim() || !selectedProjectId) {
       message.error('Please enter a valid project name');
@@ -427,25 +450,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCompleteIdea = async (id: string) => {
-    try {
-      await updateDoc(doc(db, 'ideas', id), { completedAt: serverTimestamp() });
-      message.success('Idea marked as complete');
-    } catch (error) {
-      console.error('Error completing idea:', error);
-      message.error('Failed to complete idea');
-    }
-  };
 
-  const handleUncompleteIdea = async (id: string) => {
-    try {
-      await updateDoc(doc(db, 'ideas', id), { completedAt: null });
-      message.success('Idea marked as active');
-    } catch (error) {
-      console.error('Error uncompleting idea:', error);
-      message.error('Failed to reactive idea');
-    }
-  };
 
   const handleDeleteIdea = async (id: string) => {
     try {
@@ -456,6 +461,29 @@ const App: React.FC = () => {
       message.error('Failed to delete idea');
     }
   };
+
+  const handleCreateProjectFromIdea = async (idea: Idea) => {
+    if (!user) {
+      message.error('Please login to create projects');
+      return;
+    }
+    try {
+      const docRef = await addDoc(collection(db, 'projects'), {
+        name: idea.content,
+        description: idea.notes || '',
+        createdAt: serverTimestamp(),
+      });
+      // Delete the idea after creating a project from it
+      await deleteDoc(doc(db, 'ideas', idea.id));
+
+      setSelectedProjectId(docRef.id);
+      setActiveTab('1'); // Switch to Tracker tab
+      message.success('Project created from idea');
+    } catch (error) {
+      console.error('Error creating project from idea:', error);
+      message.error('Failed to create project');
+    }
+  };
   const startEditingTime = (task: Task, field: 'timestamp' | 'completedAt' = 'timestamp') => {
     setEditingTaskId(task.id);
     setEditingField(field);
@@ -463,17 +491,39 @@ const App: React.FC = () => {
     if (!ts && field === 'completedAt') {
       // If setting a completedAt for the first time, default to now or start time + 1 hour
       const date = task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp;
-      setEditingTime(dayjs(date).add(1, 'hour').format('HH:mm'));
+      setEditingValue(dayjs(date).add(1, 'hour').format('HH:mm'));
     } else {
       const date = ts instanceof Timestamp ? ts.toDate() : ts;
-      setEditingTime(dayjs(date).format('HH:mm'));
+      setEditingValue(dayjs(date).format('HH:mm'));
+    }
+  };
+
+  const startEditingTaskName = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditingField('name');
+    setEditingValue(task.name);
+  };
+
+  const saveEditedTaskName = async (id: string) => {
+    try {
+      if (!editingValue.trim()) {
+        message.warning('Task name cannot be empty');
+        return;
+      }
+      await updateDoc(doc(db, 'tasks', id), { name: editingValue.trim() });
+      setEditingTaskId(null);
+      setEditingField(null);
+      message.success('Task updated');
+    } catch (error) {
+      console.error('Error updating task name:', error);
+      message.error('Failed to update task');
     }
   };
 
   const saveEditedTime = async (id: string) => {
     if (!editingField) return;
     try {
-      const parts = editingTime.split(':').map(Number);
+      const parts = editingValue.split(':').map(Number);
       if (parts.length < 2 || parts.some(isNaN)) {
         message.error('Invalid time format. Use HH:mm');
         return;
@@ -576,8 +626,8 @@ const App: React.FC = () => {
             <Space size="small">
               <Input
                 size="small"
-                value={editingTime}
-                onChange={e => setEditingTime(e.target.value)}
+                value={editingValue}
+                onChange={e => setEditingValue(e.target.value)}
                 onPressEnter={() => saveEditedTime(record.id)}
                 style={{ width: '80px' }}
                 autoFocus
@@ -647,20 +697,54 @@ const App: React.FC = () => {
 
         return (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Space direction="vertical" size={0}>
-              <Text style={{
-                color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)',
-                fontSize: '15px',
-                fontWeight: 500,
-                textDecoration: record.completedAt ? 'line-through' : 'none'
-              }}>
-                {name}
-              </Text>
+            <Space direction="vertical" size={0} style={{ flex: 1 }}>
+              {editingTaskId === record.id && editingField === 'name' ? (
+                <Space size="small" style={{ width: '100%' }}>
+                  <Input
+                    size="small"
+                    value={editingValue}
+                    onChange={e => setEditingValue(e.target.value)}
+                    onPressEnter={() => saveEditedTaskName(record.id)}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--primary-color)' }}
+                    autoFocus
+                  />
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<CheckOutlined style={{ color: '#10b981' }} />}
+                    onClick={() => saveEditedTaskName(record.id)}
+                  />
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<CloseOutlined style={{ color: '#ef4444' }} />}
+                    onClick={() => {
+                      setEditingTaskId(null);
+                      setEditingField(null);
+                    }}
+                  />
+                </Space>
+              ) : (
+                <Text
+                  onClick={() => startEditingTaskName(record)}
+                  style={{
+                    color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    textDecoration: record.completedAt ? 'line-through' : 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {name} <EditOutlined style={{ fontSize: '10px', opacity: 0.3, marginLeft: '4px' }} />
+                </Text>
+              )}
               <Space>
                 {project && (
-                  <Tag color="blue" bordered={false} style={{ fontSize: '10px', background: 'var(--bg-input)', color: 'var(--accent-color)' }}>
-                    {project.name}
-                  </Tag>
+                  <Tooltip title={project.description}>
+                    <Tag color="blue" bordered={false} style={{ fontSize: '10px', background: 'var(--bg-input)', color: 'var(--accent-color)', cursor: project.description ? 'help' : 'default' }}>
+                      {project.name}
+                    </Tag>
+                  </Tooltip>
                 )}
                 {record.duration && (
                   <Tag color="success" bordered={false} style={{ fontSize: '10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
@@ -675,8 +759,8 @@ const App: React.FC = () => {
                   <Space size="small">
                     <Input
                       size="small"
-                      value={editingTime}
-                      onChange={e => setEditingTime(e.target.value)}
+                      value={editingValue}
+                      onChange={e => setEditingValue(e.target.value)}
                       onPressEnter={() => saveEditedTime(record.id)}
                       style={{ width: '80px' }}
                       autoFocus
@@ -876,6 +960,18 @@ const App: React.FC = () => {
                                 PROJECTS & LOGGING
                               </Text>
                               <Space size="middle">
+                                {projects?.some(p => p.isFocused) && !isAddingProject && !isRenamingProject && (
+                                  <Button
+                                    type="link"
+                                    size="small"
+                                    onClick={() => setIsFocusMode(!isFocusMode)}
+                                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: isFocusMode ? 'var(--primary-color)' : 'var(--text-main)' }}
+                                    icon={isFocusMode ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                                    title={isFocusMode ? "Show all projects" : "Show focus list"}
+                                  >
+                                    {isFocusMode ? 'Show All' : 'Focus Mode'}
+                                  </Button>
+                                )}
                                 {selectedProjectId && !isAddingProject && !isRenamingProject && (
                                   <Button
                                     ref={tourRefs.rename}
@@ -897,9 +993,13 @@ const App: React.FC = () => {
                                   type="link"
                                   size="small"
                                   onClick={() => {
-                                    setIsAddingProject(!isAddingProject);
-                                    setIsRenamingProject(false);
-                                    setNewProjectName('');
+                                    if (isAddingProject || isRenamingProject) {
+                                      setIsAddingProject(false);
+                                      setIsRenamingProject(false);
+                                      setNewProjectName('');
+                                    } else {
+                                      setIsAddingProject(true);
+                                    }
                                   }}
                                   style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--primary-color)' }}
                                 >
@@ -909,17 +1009,26 @@ const App: React.FC = () => {
                             </div>
 
                             {isAddingProject || isRenamingProject ? (
-                              <Input.Search
-                                placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
-                                enterButton={isRenamingProject ? "Save" : <PlusOutlined />}
-                                value={isRenamingProject ? newProjectName : ''}
-                                onChange={(e) => setNewProjectName(e.target.value)}
-                                onSearch={isRenamingProject ? handleRenameProject : handleAddProject}
-                                size="large"
-                              />
+                              <Space.Compact style={{ width: '100%', marginBottom: '16px' }}>
+                                <Input
+                                  placeholder={isRenamingProject ? "Enter new name" : "Enter new project name"}
+                                  value={newProjectName}
+                                  onChange={(e) => setNewProjectName(e.target.value)}
+                                  onPressEnter={isRenamingProject ? handleRenameProject : handleAddProject}
+                                  size="large"
+                                />
+                                <Button
+                                  type="primary"
+                                  size="large"
+                                  onClick={isRenamingProject ? handleRenameProject : handleAddProject}
+                                  icon={isRenamingProject ? undefined : <PlusOutlined />}
+                                >
+                                  {isRenamingProject ? "Save" : ""}
+                                </Button>
+                              </Space.Compact>
                             ) : (
                               <div id="project-section" style={{ display: 'grid', gap: '12px' }}>
-                                {projects?.map((p: Project) => (
+                                {projects?.filter(p => !isFocusMode || p.isFocused).map((p: Project) => (
                                   <div
                                     key={p.id}
                                     style={{
@@ -932,40 +1041,58 @@ const App: React.FC = () => {
                                       border: '1px solid var(--border-color)'
                                     }}
                                   >
-                                    <div style={{ minWidth: '100px', flexShrink: 0 }}>
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={p.isFocused ? <PushpinFilled style={{ color: 'var(--primary-color)' }} /> : <PushpinOutlined />}
+                                      onClick={() => handleToggleProjectFocus(p.id, !!p.isFocused)}
+                                      style={{ color: p.isFocused ? 'var(--primary-color)' : 'var(--text-muted)', padding: 0, minWidth: '24px' }}
+                                      title={p.isFocused ? "Remove from focus list" : "Add to focus list"}
+                                    />
+                                    <div style={{ width: '150px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                       <Text
                                         strong
+                                        ellipsis={{ tooltip: p.name }}
                                         style={{
                                           color: 'var(--text-main)',
                                           cursor: 'pointer',
-                                          textDecoration: selectedProjectId === p.id ? 'underline' : 'none'
+                                          textDecoration: selectedProjectId === p.id ? 'underline' : 'none',
+                                          flex: 1
                                         }}
                                         onClick={() => setSelectedProjectId(p.id)}
                                       >
                                         {p.name}
                                       </Text>
+                                      {p.description && (
+                                        <Tooltip title={p.description}>
+                                          <InfoCircleOutlined style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'help' }} />
+                                        </Tooltip>
+                                      )}
                                     </div>
-                                    <Input
-                                      placeholder="What are you doing?"
-                                      variant="borderless"
-                                      value={projectTaskNames[p.id] || ''}
-                                      onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                      onPressEnter={() => handleAddTask(p.id)}
-                                      style={{ color: 'var(--text-main)' }}
-                                    />
-                                    <Button
-                                      type="primary"
-                                      size="small"
-                                      onClick={() => handleAddTask(p.id)}
-                                      disabled={!user && !isTourOpen}
-                                      style={{
-                                        borderRadius: '6px',
-                                        background: (isTourOpen || user) ? 'var(--primary-color)' : 'var(--bg-card)',
-                                        borderColor: (isTourOpen || user) ? 'var(--primary-color)' : 'var(--border-color)'
-                                      }}
-                                    >
-                                      Log
-                                    </Button>
+                                    <Space.Compact style={{ flex: 1 }}>
+                                      <Input
+                                        placeholder="What are you doing?"
+                                        value={projectTaskNames[p.id] || ''}
+                                        onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                        onPressEnter={() => handleAddTask(p.id)}
+                                        style={{
+                                          color: 'var(--text-main)',
+                                          background: 'rgba(0, 0, 0, 0.2)',
+                                          borderColor: 'var(--border-color)'
+                                        }}
+                                      />
+                                      <Button
+                                        type="primary"
+                                        onClick={() => handleAddTask(p.id)}
+                                        disabled={!user && !isTourOpen}
+                                        style={{
+                                          background: (isTourOpen || user) ? 'var(--primary-color)' : 'var(--bg-card)',
+                                          borderColor: (isTourOpen || user) ? (isFocusMode ? 'var(--primary-color)' : 'var(--border-color)') : 'var(--border-color)'
+                                        }}
+                                      >
+                                        Log
+                                      </Button>
+                                    </Space.Compact>
                                   </div>
                                 ))}
                                 {(!projects || projects.length === 0) && (
@@ -1054,7 +1181,6 @@ const App: React.FC = () => {
                             size="small"
                             style={{
                               position: 'relative',
-                              opacity: idea.completedAt ? 0.6 : 1,
                               transition: 'all 0.3s ease'
                             }}
                           >
@@ -1063,8 +1189,7 @@ const App: React.FC = () => {
                                 <Text style={{
                                   color: 'var(--text-main)',
                                   fontSize: '16px',
-                                  fontWeight: 600,
-                                  textDecoration: idea.completedAt ? 'line-through' : 'none'
+                                  fontWeight: 600
                                 }}>
                                   {idea.content}
                                 </Text>
@@ -1122,27 +1247,21 @@ const App: React.FC = () => {
                                 </div>
                               </div>
                               <Space>
-                                {idea.completedAt ? (
-                                  <Button
-                                    type="text"
-                                    icon={<UndoOutlined />}
-                                    onClick={() => handleUncompleteIdea(idea.id)}
-                                    className="action-btn"
-                                  />
-                                ) : (
-                                  <Button
-                                    type="text"
-                                    icon={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-                                    onClick={() => handleCompleteIdea(idea.id)}
-                                    className="action-btn"
-                                  />
-                                )}
+                                <Button
+                                  ref={idea.id === 'demo-i1' ? tourRefs.rocketBtn : undefined}
+                                  type="text"
+                                  icon={<RocketOutlined style={{ color: 'var(--primary-color)' }} />}
+                                  onClick={() => handleCreateProjectFromIdea(idea)}
+                                  className="action-btn"
+                                  title="Create Project"
+                                />
                                 <Button
                                   type="text"
                                   danger
                                   icon={<DeleteOutlined />}
                                   onClick={() => handleDeleteIdea(idea.id)}
                                   className="action-btn"
+                                  title="Delete Idea"
                                 />
                               </Space>
                             </div>
