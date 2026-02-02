@@ -381,6 +381,31 @@ const App: React.FC = () => {
     }
   };
 
+  const updateToNow = async (id: string, field: 'timestamp' | 'completedAt' = 'timestamp') => {
+    try {
+      const now = Date.now();
+      const taskSnap = await getDoc(doc(db, 'tasks', id));
+      if (taskSnap.exists()) {
+        const task = taskSnap.data() as Task;
+        const updates: Record<string, FirestoreDate | number> = { [field]: now };
+
+        // Recalculate duration
+        const startTime = field === 'timestamp' ? now : (task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp);
+        const endTime = field === 'completedAt' ? now : (task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt || null));
+
+        if (startTime && endTime) {
+          updates.duration = endTime - startTime;
+        }
+
+        await updateDoc(doc(db, 'tasks', id), updates as Record<string, unknown>);
+        message.success(`${field === 'timestamp' ? 'Start' : 'End'} time updated to now`);
+      }
+    } catch (error) {
+      console.error('Error updating time to now:', error);
+      message.error('Failed to update time');
+    }
+  };
+
   const exportToCSV = async () => {
     if (!tasks || tasks.length === 0) {
       message.warning('No tasks to export');
@@ -449,18 +474,29 @@ const App: React.FC = () => {
           );
         }
         return (
-          <Space
-            onClick={() => startEditingTime(record, 'timestamp')}
-            style={{ cursor: 'pointer' }}
-          >
-            <ClockCircleOutlined style={{ color: 'var(--primary-color)' }} />
-            <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px' }}>
-              {formatDate(ts, 'HH:mm')}
-            </Title>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {formatDate(ts, 'MMM DD')}
-            </Text>
-            <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
+          <Space size="small">
+            <Space
+              onClick={() => startEditingTime(record, 'timestamp')}
+              style={{ cursor: 'pointer' }}
+            >
+              <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px' }}>
+                {formatDate(ts, 'HH:mm')}
+              </Title>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {formatDate(ts, 'MMM DD')}
+              </Text>
+              <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
+            </Space>
+            <Button
+                  type="text"
+                  size="small"
+                  icon={<ClockCircleOutlined />}
+                  onClick={() => updateToNow(record.id, 'timestamp')}
+                  style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+                  title="Update start time to now"
+                >
+                  Now
+                </Button>
           </Space>
         );
       },
@@ -552,15 +588,17 @@ const App: React.FC = () => {
                 </Button>
               </Space>
             ) : (
-              <Button
-                type="text"
-                size="small"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleCompleteTask(record.id)}
-                style={{ color: 'var(--primary-color)', fontSize: '12px' }}
-              >
-                Complete
-              </Button>
+              <Space>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => handleCompleteTask(record.id)}
+                  style={{ color: 'var(--primary-color)', fontSize: '12px' }}
+                >
+                  Complete
+                </Button>
+              </Space>
             )}
           </div>
         );
