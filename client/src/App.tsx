@@ -12,8 +12,11 @@ import {
   ConfigProvider,
   theme,
   Select,
-  Tabs
+  Tabs,
+  Tour,
+  Alert
 } from 'antd';
+import type { TourProps } from 'antd';
 import {
   PlusOutlined,
   DownloadOutlined,
@@ -88,6 +91,15 @@ const App: React.FC = () => {
   const [ideaContent, setIdeaContent] = useState('');
   const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState('');
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  const tourRefs = {
+    projects: React.useRef<HTMLDivElement>(null),
+    history: React.useRef<HTMLDivElement>(null),
+    ideas: React.useRef<HTMLDivElement>(null),
+    login: React.useRef<any>(null),
+    nowButton: React.useRef<any>(null),
+  };
 
   const [projectsSnapshot, loadingProjects, errorProjects] = useCollection(
     user ? query(collection(db, 'projects'), orderBy('createdAt', 'desc')) : null
@@ -123,6 +135,39 @@ const App: React.FC = () => {
       }
     }
   }, [errorProjects, errorTasks, errorIdeas]);
+
+  const tourSteps: TourProps['steps'] = [
+    {
+      title: 'Welcome to Time Logg!',
+      description: 'Let us show you around. This is a demo mode since you are not logged in.',
+      target: () => tourRefs.projects.current!,
+    },
+    {
+      title: 'Log Your Work',
+      description: 'Select a project and type what you are doing. Click "Log" to start the timer.',
+      target: () => tourRefs.projects.current!,
+    },
+    {
+      title: 'Update Start Time',
+      description: 'Forgot to start? Click "Now" to reset the start time to the current moment.',
+      target: () => tourRefs.nowButton.current!,
+    },
+    {
+      title: 'Track Your History',
+      description: 'See all your logged tasks here. You can edit times or mark them as complete.',
+      target: () => tourRefs.history.current!,
+    },
+    {
+      title: 'Capture Ideas',
+      description: 'Switch to the Ideas tab to store quick notes and future project thoughts.',
+      target: () => tourRefs.ideas.current!,
+    },
+    {
+      title: 'Save Permanently',
+      description: 'Data in demo mode is not saved. Login with your Google account to sync your logs across devices.',
+      target: () => tourRefs.login.current!,
+    },
+  ];
 
   const handleLogin = async () => {
     try {
@@ -488,15 +533,15 @@ const App: React.FC = () => {
               <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
             </Space>
             <Button
-                  type="text"
-                  size="small"
-                  icon={<ClockCircleOutlined />}
-                  onClick={() => updateToNow(record.id, 'timestamp')}
-                  style={{ color: 'var(--text-muted)', fontSize: '12px' }}
-                  title="Update start time to now"
-                >
-                  Now
-                </Button>
+              type="text"
+              size="small"
+              icon={<ClockCircleOutlined />}
+              onClick={() => updateToNow(record.id, 'timestamp')}
+              style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+              title="Update start time to now"
+            >
+              Now
+            </Button>
           </Space>
         );
       },
@@ -590,6 +635,7 @@ const App: React.FC = () => {
             ) : (
               <Space>
                 <Button
+                  ref={record.id === 't2' ? tourRefs.nowButton : undefined}
                   type="text"
                   size="small"
                   icon={<CheckCircleOutlined />}
@@ -654,6 +700,7 @@ const App: React.FC = () => {
                 </Space>
               ) : (
                 <Button
+                  ref={tourRefs.login}
                   type="primary"
                   icon={<GoogleOutlined />}
                   onClick={handleLogin}
@@ -693,9 +740,23 @@ const App: React.FC = () => {
                 ),
                 children: (
                   <>
-                    <Card className="flat-card" style={{ marginBottom: '32px' }}>
+                    {!user && (
+                      <Alert
+                        message="Welcome to Time Logg Demo!"
+                        description="Explore the features with dummy data. Login to save your own tasks permanently."
+                        type="info"
+                        showIcon
+                        action={
+                          <Button size="small" type="primary" onClick={() => setIsTourOpen(true)}>
+                            Start Tutorial
+                          </Button>
+                        }
+                        style={{ marginBottom: '24px', borderRadius: '12px', border: '1px solid var(--primary-color)', background: 'rgba(37, 99, 235, 0.1)' }}
+                      />
+                    )}
+                    <Card ref={tourRefs.projects} className="flat-card" style={{ marginBottom: '32px' }}>
                       <Space direction="vertical" style={{ width: '100%' }} size="large">
-                        <div>
+                        <div id="project-section">
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
                             <Text strong style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                               PROJECTS & LOGGING
@@ -810,7 +871,7 @@ const App: React.FC = () => {
                       </Button>
                     </div>
 
-                    <Card className="flat-card" styles={{ body: { padding: 0 } }}>
+                    <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
                       <Table
                         dataSource={tasks}
                         columns={columns}
@@ -826,7 +887,7 @@ const App: React.FC = () => {
               {
                 key: '2',
                 label: (
-                  <span>
+                  <span ref={tourRefs.ideas}>
                     <BulbOutlined />
                     Ideas
                   </span>
@@ -975,6 +1036,15 @@ const App: React.FC = () => {
             ]}
           />
         </Content>
+        <Tour
+          open={isTourOpen}
+          onClose={() => setIsTourOpen(false)}
+          steps={tourSteps}
+          mask={{
+            color: 'rgba(0, 0, 0, 0.85)',
+          }}
+          gap={{ offset: 6 }}
+        />
       </Layout>
     </ConfigProvider>
   );
