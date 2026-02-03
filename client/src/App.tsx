@@ -15,7 +15,8 @@ import {
   Tabs,
   Tour,
   Alert,
-  Tooltip
+  Tooltip,
+  DatePicker
 } from 'antd';
 import type { TourProps } from 'antd';
 import {
@@ -81,6 +82,8 @@ const App: React.FC = () => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | 'name' | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editingDateValue, setEditingDateValue] = useState<dayjs.Dayjs | null>(null);
+
   const [currentTheme, setCurrentTheme] = useState<string>('default');
   const [ideaContent, setIdeaContent] = useState('');
   const [editingIdeaNotesId, setEditingIdeaNotesId] = useState<string | null>(null);
@@ -508,10 +511,13 @@ const App: React.FC = () => {
     if (!ts && field === 'completedAt') {
       // If setting a completedAt for the first time, default to now or start time + 1 hour
       const date = task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp;
-      setEditingValue(dayjs(date).add(1, 'hour').format('HH:mm'));
+      const defaultDateTime = dayjs(date).add(1, 'hour');
+      setEditingValue(defaultDateTime.format('HH:mm'));
+      setEditingDateValue(defaultDateTime);
     } else {
       const date = ts instanceof Timestamp ? ts.toDate() : ts;
       setEditingValue(dayjs(date).format('HH:mm'));
+      setEditingDateValue(dayjs(date));
     }
   };
 
@@ -550,9 +556,8 @@ const App: React.FC = () => {
       const taskSnap = await getDoc(doc(db, 'tasks', id));
       if (taskSnap.exists()) {
         const task = taskSnap.data() as Task;
-        const ts = task[editingField];
-        const baseDate = ts instanceof Timestamp ? ts.toDate() : (ts || (task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp));
-        const newTimestamp = dayjs(baseDate).hour(h).minute(m).second(0).valueOf();
+        const baseDate = editingDateValue || dayjs();
+        const newTimestamp = baseDate.hour(h).minute(m).second(0).valueOf();
 
         const updates: Record<string, FirestoreDate | number> = { [editingField]: newTimestamp };
 
@@ -608,9 +613,11 @@ const App: React.FC = () => {
 
     const projectMap = new Map(projects?.map((p: Project) => [p.id, p.name]));
 
-    const headers = ['Timestamp', 'Project', 'Task'];
+    const headers = ['Start Time', 'End Time', 'Duration (min)', 'Project', 'Task'];
     const rows = tasks.map((task: Task) => [
       formatDate(task.timestamp, 'YYYY-MM-DD HH:mm'),
+      task.completedAt ? formatDate(task.completedAt, 'YYYY-MM-DD HH:mm') : 'Pending',
+      task.duration ? Math.round(task.duration / 60000).toString() : '0',
       projectMap.get(task.projectId) || 'Unknown',
       task.name
     ]);
@@ -640,30 +647,42 @@ const App: React.FC = () => {
       render: (ts: number, record: Task) => {
         if (editingTaskId === record.id && editingField === 'timestamp') {
           return (
-            <Space size="small">
-              <Input
-                size="small"
-                value={editingValue}
-                onChange={e => setEditingValue(e.target.value)}
-                onPressEnter={() => saveEditedTime(record.id)}
-                style={{ width: '80px' }}
-                autoFocus
-              />
-              <Button
-                size="small"
-                type="text"
-                icon={<CheckOutlined style={{ color: '#10b981' }} />}
-                onClick={() => saveEditedTime(record.id)}
-              />
-              <Button
-                size="small"
-                type="text"
-                icon={<CloseOutlined style={{ color: '#ef4444' }} />}
-                onClick={() => {
-                  setEditingTaskId(null);
-                  setEditingField(null);
-                }}
-              />
+            <Space size="small" direction="vertical">
+              <Space size="small">
+                <DatePicker
+                  size="small"
+                  value={editingDateValue}
+                  onChange={val => setEditingDateValue(val)}
+                  format="MMM DD, YYYY"
+                  allowClear={false}
+                  style={{ width: '120px' }}
+                />
+                <Input
+                  size="small"
+                  value={editingValue}
+                  onChange={e => setEditingValue(e.target.value)}
+                  onPressEnter={() => saveEditedTime(record.id)}
+                  style={{ width: '70px' }}
+                  autoFocus
+                />
+              </Space>
+              <Space size="small">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<CheckOutlined style={{ color: '#10b981' }} />}
+                  onClick={() => saveEditedTime(record.id)}
+                />
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<CloseOutlined style={{ color: '#ef4444' }} />}
+                  onClick={() => {
+                    setEditingTaskId(null);
+                    setEditingField(null);
+                  }}
+                />
+              </Space>
             </Space>
           );
         }
@@ -773,30 +792,42 @@ const App: React.FC = () => {
             {record.completedAt ? (
               <Space>
                 {editingTaskId === record.id && editingField === 'completedAt' ? (
-                  <Space size="small">
-                    <Input
-                      size="small"
-                      value={editingValue}
-                      onChange={e => setEditingValue(e.target.value)}
-                      onPressEnter={() => saveEditedTime(record.id)}
-                      style={{ width: '80px' }}
-                      autoFocus
-                    />
-                    <Button
-                      size="small"
-                      type="text"
-                      icon={<CheckOutlined style={{ color: '#10b981' }} />}
-                      onClick={() => saveEditedTime(record.id)}
-                    />
-                    <Button
-                      size="small"
-                      type="text"
-                      icon={<CloseOutlined style={{ color: '#ef4444' }} />}
-                      onClick={() => {
-                        setEditingTaskId(null);
-                        setEditingField(null);
-                      }}
-                    />
+                  <Space size="small" direction="vertical">
+                    <Space size="small">
+                      <DatePicker
+                        size="small"
+                        value={editingDateValue}
+                        onChange={val => setEditingDateValue(val)}
+                        format="MMM DD, YYYY"
+                        allowClear={false}
+                        style={{ width: '120px' }}
+                      />
+                      <Input
+                        size="small"
+                        value={editingValue}
+                        onChange={e => setEditingValue(e.target.value)}
+                        onPressEnter={() => saveEditedTime(record.id)}
+                        style={{ width: '70px' }}
+                        autoFocus
+                      />
+                    </Space>
+                    <Space size="small">
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<CheckOutlined style={{ color: '#10b981' }} />}
+                        onClick={() => saveEditedTime(record.id)}
+                      />
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<CloseOutlined style={{ color: '#ef4444' }} />}
+                        onClick={() => {
+                          setEditingTaskId(null);
+                          setEditingField(null);
+                        }}
+                      />
+                    </Space>
                   </Space>
                 ) : (
                   <Button
@@ -805,18 +836,20 @@ const App: React.FC = () => {
                     onClick={() => startEditingTime(record, 'completedAt')}
                     style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
                   >
-                    Ended {formatDate(record.completedAt, 'HH:mm')}
+                    Ended {formatDate(record.completedAt, 'HH:mm')} {formatDate(record.completedAt, 'MMM DD')}
                   </Button>
                 )}
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<UndoOutlined />}
-                  onClick={() => handleUncompleteTask(record.id)}
-                  style={{ color: 'var(--text-muted)', fontSize: '12px' }}
-                >
-                  Undo
-                </Button>
+                {!editingTaskId && (
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<UndoOutlined />}
+                    onClick={() => handleUncompleteTask(record.id)}
+                    style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+                  >
+                    Undo
+                  </Button>
+                )}
               </Space>
             ) : (
               <Space>
