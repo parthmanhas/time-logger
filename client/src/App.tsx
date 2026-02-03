@@ -104,6 +104,7 @@ const App: React.FC = () => {
   const [projectFilter, setProjectFilter] = useState<string>(() => {
     return localStorage.getItem('projectHistoryFilter') || 'all';
   });
+  const [dateFilter, setDateFilter] = useState<string>('all');
 
 
   const tourRefs = {
@@ -640,6 +641,43 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const baseFilteredTasks = tasks?.filter((task: Task) => {
+    const statusMatch = taskFilter === 'all' ||
+      (taskFilter === 'pending' && !task.completedAt) ||
+      (taskFilter === 'completed' && !!task.completedAt);
+    const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
+    return statusMatch && projectMatch;
+  }) || [];
+
+  const filteredTasks = baseFilteredTasks.filter((task: Task) => {
+    const dateMatch = dateFilter === 'all' || formatDate(task.timestamp, 'YYYY-MM-DD') === dateFilter;
+    return dateMatch;
+  }).sort((a, b) => {
+    const tA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number || 0);
+    const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
+    return tB - tA;
+  });
+
+  const totalDurationMillis = filteredTasks.reduce((acc, task) => acc + (task.duration || 0), 0);
+
+  const formatTotalDuration = (ms: number) => {
+    const mins = Math.floor(ms / (1000 * 60));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0 && m === 0) return '0m';
+    return `${h > 0 ? `${h}h ` : ''}${m}m`;
+  };
+
+  const dailyTotals = baseFilteredTasks.reduce((acc: Record<string, number>, task) => {
+    const dateStr = formatDate(task.timestamp, 'YYYY-MM-DD');
+    acc[dateStr] = (acc[dateStr] || 0) + (task.duration || 0);
+    return acc;
+  }, {});
+
+  const sortedDays = Object.keys(dailyTotals)
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 14); // Last 14 days with activity
+
   const columns = [
     {
       title: 'Time',
@@ -690,31 +728,33 @@ const App: React.FC = () => {
         }
         return (
           <Space size="small">
-            <Space
+            <div
               onClick={() => startEditingTime(record, 'timestamp')}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0' }}
             >
-              <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px' }}>
+              <Title level={5} style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.2' }}>
                 {formatDate(ts, 'HH:mm')}
               </Title>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
+              <Text type="secondary" style={{ fontSize: '11px', lineHeight: '1.2' }}>
                 {formatDate(ts, 'MMM DD')}
               </Text>
-              <span ref={record.id === 'demo-t1' ? tourRefs.pencil : undefined}>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span ref={record.id === 'demo-t1' ? tourRefs.pencil : undefined} onClick={() => startEditingTime(record, 'timestamp')} style={{ cursor: 'pointer' }}>
                 <EditOutlined style={{ fontSize: '10px', opacity: 0.3 }} />
               </span>
-            </Space>
-            <Button
-              ref={record.id === 'demo-t1' ? tourRefs.nowButton : undefined}
-              type="text"
-              size="small"
-              icon={<ClockCircleOutlined />}
-              onClick={() => updateToNow(record.id, 'timestamp')}
-              style={{ color: 'var(--text-muted)', fontSize: '12px' }}
-              title="Update start time to now"
-            >
-              Now
-            </Button>
+              <Button
+                ref={record.id === 'demo-t1' ? tourRefs.nowButton : undefined}
+                type="text"
+                size="small"
+                icon={<ClockCircleOutlined />}
+                onClick={() => updateToNow(record.id, 'timestamp')}
+                style={{ color: 'var(--text-muted)', fontSize: '12px' }}
+                title="Update start time to now"
+              >
+                Now
+              </Button>
+            </div>
           </Space>
         );
       },
@@ -836,9 +876,12 @@ const App: React.FC = () => {
                     type="link"
                     size="small"
                     onClick={() => startEditingTime(record, 'completedAt')}
-                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}
+                    style={{ padding: 0, height: 'auto', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'left' }}
                   >
-                    Ended {formatDate(record.completedAt, 'HH:mm')} {formatDate(record.completedAt, 'MMM DD')}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span>Ended {formatDate(record.completedAt, 'HH:mm')}</span>
+                      <span style={{ fontSize: '10px', opacity: 0.8 }}>{formatDate(record.completedAt, 'MMM DD')}</span>
+                    </div>
                   </Button>
                 )}
                 {!editingTaskId && (
@@ -1192,6 +1235,16 @@ const App: React.FC = () => {
                                   Project: {projects?.find(p => p.id === projectFilter)?.name}
                                 </Tag>
                               )}
+                              {dateFilter !== 'all' && (
+                                <Tag
+                                  color="orange"
+                                  closable
+                                  onClose={() => setDateFilter('all')}
+                                  style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#f97316' }}
+                                >
+                                  Date: {dayjs(dateFilter).format('MMM DD, YYYY')}
+                                </Tag>
+                              )}
                             </Space>
                             <Button
                               ref={tourRefs.export}
@@ -1203,21 +1256,168 @@ const App: React.FC = () => {
                             </Button>
                           </div>
 
+                          {filteredTasks.length > 0 && (
+                            <div style={{ marginBottom: '16px', background: 'var(--bg-input)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', animation: 'fadeIn 0.5s ease-out' }}>
+                              <div style={{
+                                width: '40px',
+                                height: '40px',
+                                background: 'rgba(37, 99, 235, 0.1)',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: '16px'
+                              }}>
+                                <ClockCircleOutlined style={{ color: 'var(--primary-color)', fontSize: '20px' }} />
+                              </div>
+                              <div>
+                                <Text type="secondary" style={{ fontSize: '11px', display: 'block', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>
+                                  TIME SPENT {projectFilter !== 'all' ? `ON ${projects?.find(p => p.id === projectFilter)?.name.toUpperCase()}` : 'OVERALL'}
+                                </Text>
+                                <Title level={3} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800, fontSize: '24px' }}>
+                                  {formatTotalDuration(totalDurationMillis)}
+                                </Title>
+                              </div>
+                            </div>
+                          )}
+
+                          {sortedDays.length > 0 && (
+                            <div style={{ marginBottom: '24px', animation: 'fadeIn 0.7s ease-out' }}>
+                              <Text strong style={{ color: 'var(--text-muted)', fontSize: '11px', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                                DAILY ACTIVITY
+                              </Text>
+                              <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                overflowX: 'auto',
+                                paddingBottom: '8px',
+                                scrollbarWidth: 'none',
+                                msOverflowStyle: 'none'
+                              }}>
+                                {sortedDays.map(day => (
+                                  <div
+                                    key={day}
+                                    onClick={() => setDateFilter(dateFilter === day ? 'all' : day)}
+                                    style={{
+                                      minWidth: '100px',
+                                      background: dateFilter === day ? 'rgba(37, 99, 235, 0.15)' : 'var(--bg-card)',
+                                      padding: '12px',
+                                      borderRadius: '10px',
+                                      border: dateFilter === day ? '1px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                      textAlign: 'center',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      boxShadow: dateFilter === day ? '0 0 10px rgba(37, 99, 235, 0.2)' : 'none'
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>
+                                      {dayjs(day).format('ddd, MMM DD')}
+                                    </Text>
+                                    <Text strong style={{ fontSize: '16px', color: 'var(--text-main)' }}>
+                                      {formatTotalDuration(dailyTotals[day])}
+                                    </Text>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {dateFilter !== 'all' && (
+                            <div style={{ marginBottom: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+                              <Text strong style={{ color: 'var(--text-muted)', fontSize: '11px', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                                24H TIMELINE &mdash; {dayjs(dateFilter).format('MMMM DD')}
+                              </Text>
+                              <div style={{
+                                position: 'relative',
+                                height: '80px',
+                                background: 'rgba(0, 0, 0, 0.2)',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)',
+                                padding: '15px 40px' // Added comfortable horizontal padding
+                              }}>
+                                <div style={{ position: 'relative', height: '50%', width: '100%' }}>
+                                  {/* Grid lines */}
+                                  {[0, 4, 8, 12, 16, 20, 24].map(hour => (
+                                    <div key={hour} style={{
+                                      position: 'absolute',
+                                      left: `${(hour / 24) * 100}%`,
+                                      height: '100%',
+                                      top: '-5px',
+                                      borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                                      zIndex: 1
+                                    }}>
+                                      <span style={{
+                                        position: 'absolute',
+                                        bottom: '-25px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontSize: '9px',
+                                        color: 'var(--text-muted)',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {hour === 0 ? '00' : hour}:00
+                                      </span>
+                                    </div>
+                                  ))}
+
+                                  {/* Task blocks */}
+                                  {filteredTasks.map(task => {
+                                    const start = dayjs(task.timestamp instanceof Timestamp ? task.timestamp.toDate() : task.timestamp);
+                                    const dayStart = dayjs(dateFilter).startOf('day');
+
+                                    // Calculate offset within the day
+                                    let left = (start.diff(dayStart) / (24 * 60 * 60 * 1000)) * 100;
+                                    let width = ((task.duration || 0) / (24 * 60 * 60 * 1000)) * 100;
+
+                                    // Handle boundary cases (clipping)
+                                    if (left < 0) {
+                                      width += left;
+                                      left = 0;
+                                    }
+                                    if (left + width > 100) {
+                                      width = 100 - left;
+                                    }
+
+                                    const project = projects?.find(p => p.id === task.projectId);
+
+                                    return (
+                                      <Tooltip
+                                        key={task.id}
+                                        title={
+                                          <div>
+                                            <strong>{task.name}</strong><br />
+                                            {project?.name}<br />
+                                            {formatTotalDuration(task.duration || 0)}
+                                            <div style={{ fontSize: '10px', marginTop: '4px', opacity: 0.8 }}>
+                                              {start.format('HH:mm')} - {start.add(task.duration || 0, 'ms').format('HH:mm')}
+                                            </div>
+                                          </div>
+                                        }
+                                      >
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${left}%`,
+                                          width: `${Math.max(width, 0.5)}%`,
+                                          height: '24px',
+                                          top: '3px',
+                                          background: 'linear-gradient(135deg, var(--primary-color), #3b82f6)',
+                                          borderRadius: '4px',
+                                          zIndex: 2,
+                                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                                          cursor: 'pointer'
+                                        }} />
+                                      </Tooltip>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
                             <Table
-                              dataSource={tasks?.filter((task: Task) => {
-                                const statusMatch = taskFilter === 'all' ||
-                                  (taskFilter === 'pending' && !task.completedAt) ||
-                                  (taskFilter === 'completed' && !!task.completedAt);
-
-                                const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
-
-                                return statusMatch && projectMatch;
-                              }).sort((a, b) => {
-                                const tA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number || 0);
-                                const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
-                                return tB - tA;
-                              })}
+                              dataSource={filteredTasks}
                               columns={columns}
                               rowKey="id"
                               loading={loadingTasks && !!user}
