@@ -93,6 +93,10 @@ const App: React.FC = () => {
   const [demoTasks, setDemoTasks] = useState<Task[]>([]);
   const [demoIdeas, setDemoIdeas] = useState<Idea[]>([]);
   const [activeTab, setActiveTab] = useState('1');
+  const [taskFilter, setTaskFilter] = useState<string>(() => {
+    return localStorage.getItem('taskHistoryFilter') || 'all';
+  });
+
 
   const tourRefs = {
     projects: React.useRef<HTMLDivElement>(null),
@@ -286,8 +290,13 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    localStorage.setItem('taskHistoryFilter', taskFilter);
+  }, [taskFilter]);
+
+  useEffect(() => {
     document.body.setAttribute('data-theme', currentTheme);
   }, [currentTheme]);
+
 
   useEffect(() => {
     if (projects && projects.length > 0 && selectedProjectId === undefined) {
@@ -1109,7 +1118,20 @@ const App: React.FC = () => {
                       {(user || (isTourOpen && currentTourStep >= 2)) && (
                         <>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
+                            <Space size="middle">
+                              <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
+                              <Select
+                                value={taskFilter}
+                                onChange={setTaskFilter}
+                                size="small"
+                                style={{ width: 120 }}
+                                className="filter-select"
+                              >
+                                <Select.Option value="all">All Tasks</Select.Option>
+                                <Select.Option value="pending">Pending</Select.Option>
+                                <Select.Option value="completed">Completed</Select.Option>
+                              </Select>
+                            </Space>
                             <Button
                               ref={tourRefs.export}
                               icon={<DownloadOutlined />}
@@ -1122,7 +1144,11 @@ const App: React.FC = () => {
 
                           <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
                             <Table
-                              dataSource={tasks}
+                              dataSource={tasks?.filter((task: Task) => {
+                                if (taskFilter === 'pending') return !task.completedAt;
+                                if (taskFilter === 'completed') return !!task.completedAt;
+                                return true;
+                              })}
                               columns={columns}
                               rowKey="id"
                               loading={loadingTasks && !!user}
