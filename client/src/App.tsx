@@ -39,7 +39,8 @@ import {
   EyeOutlined,
   EyeInvisibleOutlined,
   PushpinOutlined,
-  PushpinFilled
+  PushpinFilled,
+  HistoryOutlined
 } from '@ant-design/icons';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -1114,6 +1115,14 @@ const App: React.FC = () => {
                                       >
                                         {p.name}
                                       </Text>
+                                      <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<HistoryOutlined style={{ color: projectFilter === p.id ? 'var(--primary-color)' : 'var(--text-muted)' }} />}
+                                        onClick={() => setProjectFilter(projectFilter === p.id ? 'all' : p.id)}
+                                        style={{ padding: 0, minWidth: '24px' }}
+                                        title="View project history"
+                                      />
                                       {p.description && (
                                         <Tooltip title={p.description}>
                                           <InfoCircleOutlined style={{ fontSize: '12px', color: 'var(--text-muted)', cursor: 'help' }} />
@@ -1173,21 +1182,16 @@ const App: React.FC = () => {
                                 ]}
                                 className="filter-segmented"
                               />
-                              <Select
-                                value={projectFilter}
-                                onChange={setProjectFilter}
-                                size="small"
-                                style={{ width: 150 }}
-                                className="filter-select"
-                                placeholder="Filter by Project"
-                                showSearch
-                                optionFilterProp="children"
-                              >
-                                <Select.Option value="all">All Projects</Select.Option>
-                                {projects?.map(p => (
-                                  <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
-                                ))}
-                              </Select>
+                              {projectFilter !== 'all' && (
+                                <Tag
+                                  color="blue"
+                                  closable
+                                  onClose={() => setProjectFilter('all')}
+                                  style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
+                                >
+                                  Project: {projects?.find(p => p.id === projectFilter)?.name}
+                                </Tag>
+                              )}
                             </Space>
                             <Button
                               ref={tourRefs.export}
