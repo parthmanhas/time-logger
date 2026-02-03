@@ -16,7 +16,8 @@ import {
   Tour,
   Alert,
   Tooltip,
-  DatePicker
+  DatePicker,
+  Segmented
 } from 'antd';
 import type { TourProps } from 'antd';
 import {
@@ -1161,17 +1162,17 @@ const App: React.FC = () => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <Space size="middle">
                               <Title level={4} style={{ margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>History</Title>
-                              <Select
+                              <Segmented
                                 value={taskFilter}
                                 onChange={setTaskFilter}
                                 size="small"
-                                style={{ width: 120 }}
-                                className="filter-select"
-                              >
-                                <Select.Option value="all">All Tasks</Select.Option>
-                                <Select.Option value="pending">Pending</Select.Option>
-                                <Select.Option value="completed">Completed</Select.Option>
-                              </Select>
+                                options={[
+                                  { label: 'All', value: 'all' },
+                                  { label: 'Pending', value: 'pending' },
+                                  { label: 'Completed', value: 'completed' },
+                                ]}
+                                className="filter-segmented"
+                              />
                               <Select
                                 value={projectFilter}
                                 onChange={setProjectFilter}
@@ -1208,6 +1209,10 @@ const App: React.FC = () => {
                                 const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
 
                                 return statusMatch && projectMatch;
+                              }).sort((a, b) => {
+                                const tA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number || 0);
+                                const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
+                                return tB - tA;
                               })}
                               columns={columns}
                               rowKey="id"
