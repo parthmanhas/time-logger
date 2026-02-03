@@ -96,6 +96,9 @@ const App: React.FC = () => {
   const [taskFilter, setTaskFilter] = useState<string>(() => {
     return localStorage.getItem('taskHistoryFilter') || 'all';
   });
+  const [projectFilter, setProjectFilter] = useState<string>(() => {
+    return localStorage.getItem('projectHistoryFilter') || 'all';
+  });
 
 
   const tourRefs = {
@@ -292,6 +295,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('taskHistoryFilter', taskFilter);
   }, [taskFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('projectHistoryFilter', projectFilter);
+  }, [projectFilter]);
+
 
   useEffect(() => {
     document.body.setAttribute('data-theme', currentTheme);
@@ -1131,6 +1139,21 @@ const App: React.FC = () => {
                                 <Select.Option value="pending">Pending</Select.Option>
                                 <Select.Option value="completed">Completed</Select.Option>
                               </Select>
+                              <Select
+                                value={projectFilter}
+                                onChange={setProjectFilter}
+                                size="small"
+                                style={{ width: 150 }}
+                                className="filter-select"
+                                placeholder="Filter by Project"
+                                showSearch
+                                optionFilterProp="children"
+                              >
+                                <Select.Option value="all">All Projects</Select.Option>
+                                {projects?.map(p => (
+                                  <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
+                                ))}
+                              </Select>
                             </Space>
                             <Button
                               ref={tourRefs.export}
@@ -1145,9 +1168,13 @@ const App: React.FC = () => {
                           <Card ref={tourRefs.history} className="flat-card" styles={{ body: { padding: 0 } }}>
                             <Table
                               dataSource={tasks?.filter((task: Task) => {
-                                if (taskFilter === 'pending') return !task.completedAt;
-                                if (taskFilter === 'completed') return !!task.completedAt;
-                                return true;
+                                const statusMatch = taskFilter === 'all' ||
+                                  (taskFilter === 'pending' && !task.completedAt) ||
+                                  (taskFilter === 'completed' && !!task.completedAt);
+
+                                const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
+
+                                return statusMatch && projectMatch;
                               })}
                               columns={columns}
                               rowKey="id"
