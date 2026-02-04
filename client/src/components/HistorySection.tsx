@@ -133,7 +133,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
                         <TableRow>
                             <TableCell sx={{ width: { xs: 85, sm: 110 }, color: 'var(--text-muted)', fontWeight: 700, fontSize: '11px', p: { xs: 0.5, sm: 1.5 } }}>TIME</TableCell>
                             <TableCell sx={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '11px', p: { xs: 0.5, sm: 1.5 } }}>TASK</TableCell>
-                            <TableCell align="right" sx={{ width: { xs: 40, sm: 50 }, color: 'var(--text-muted)', fontWeight: 700, fontSize: '11px', p: { xs: 0.5, sm: 1.5 } }} />
+                            <TableCell align="right" sx={{ width: { xs: 60, sm: 180 }, color: 'var(--text-muted)', fontWeight: 700, fontSize: '11px', p: { xs: 0.5, sm: 1.5 } }}>ACTIONS</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>

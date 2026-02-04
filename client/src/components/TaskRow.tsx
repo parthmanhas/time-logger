@@ -87,47 +87,44 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 )}
             </TableCell>
             <TableCell sx={{ p: { xs: 0.5, sm: 1.5 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ flex: 1 }}>
-                        {editingTaskId === record.id && editingField === 'name' ? (
-                            <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
-                                <TextField size="small" fullWidth value={editingValue} onChange={e => setEditingValue(e.target.value)} onKeyPress={e => e.key === 'Enter' && saveEditedTaskName(record.id)} autoFocus />
-                                <IconButton onClick={() => saveEditedTaskName(record.id)} sx={{ color: '#10b981' }}><CheckOutlined fontSize="small" /></IconButton>
-                                <IconButton onClick={() => { setEditingTaskId(null); setEditingField(null); }} sx={{ color: '#ef4444' }}><CloseOutlined fontSize="small" /></IconButton>
-                            </Stack>
-                        ) : (
-                            <Typography variant="body1" onClick={() => startEditingTaskName(record)} sx={{ color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)', fontSize: { xs: '13px', sm: '15px' }, fontWeight: 500, textDecoration: record.completedAt ? 'line-through' : 'none', cursor: 'pointer', '&:hover': { color: 'primary.main' }, wordBreak: 'break-word', lineHeight: 1.2 }}>
-                                {record.name}
-                                <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />
-                            </Typography>
-                        )}
-                        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                            {project && <Chip size="small" label={project.name} variant="outlined" sx={{ fontSize: '10px', height: 20, borderColor: 'primary.main', color: 'primary.main' }} />}
-                            {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
+                <Box sx={{ flex: 1 }}>
+                    {editingTaskId === record.id && editingField === 'name' ? (
+                        <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                            <TextField size="small" fullWidth value={editingValue} onChange={e => setEditingValue(e.target.value)} onKeyPress={e => e.key === 'Enter' && saveEditedTaskName(record.id)} autoFocus />
+                            <IconButton onClick={() => saveEditedTaskName(record.id)} sx={{ color: '#10b981' }}><CheckOutlined fontSize="small" /></IconButton>
+                            <IconButton onClick={() => { setEditingTaskId(null); setEditingField(null); }} sx={{ color: '#ef4444' }}><CloseOutlined fontSize="small" /></IconButton>
                         </Stack>
-                    </Box>
-                    <Box>
-                        {record.completedAt ? (
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Button size="small" onClick={() => startEditingTime(record, 'completedAt')} sx={{ color: 'var(--text-muted)', textAlign: 'left', p: 0.5, textTransform: 'none' }}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                        <Stack direction="row" spacing={0.5} alignItems="center">
-                                            <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
-                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
-                                        </Stack>
-                                        <Typography sx={{ fontSize: '9px', opacity: 0.7, ml: 2.2 }}>{formatDate(record.completedAt, 'MMM DD')}</Typography>
-                                    </Box>
-                                </Button>
-                                <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)' }}><UndoOutlined fontSize="small" /></IconButton>
-                            </Stack>
-                        ) : (
-                            <Button size="small" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', minWidth: 0, p: 0.5 }}><CheckCircleOutlined fontSize="small" /></Button>
-                        )}
-                    </Box>
+                    ) : (
+                        <Typography variant="body1" onClick={() => startEditingTaskName(record)} sx={{ color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)', fontSize: { xs: '13px', sm: '15px' }, fontWeight: 500, textDecoration: record.completedAt ? 'line-through' : 'none', cursor: 'pointer', '&:hover': { color: 'primary.main' }, wordBreak: 'break-word', lineHeight: 1.2 }}>
+                            {record.name}
+                            <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />
+                        </Typography>
+                    )}
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                        {project && <Chip size="small" label={project.name} variant="outlined" sx={{ fontSize: '10px', height: 20, borderColor: 'primary.main', color: 'primary.main' }} />}
+                        {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
+                    </Stack>
                 </Box>
             </TableCell>
-            <TableCell align="right" sx={{ width: { xs: 40, sm: 50 }, p: { xs: 0.5, sm: 1.5 } }}>
-                <IconButton size="small" onClick={() => handleDeleteTask(record.id)} sx={{ color: 'error.main', opacity: 0.5, '&:hover': { opacity: 1 }, p: 0.5 }}><DeleteOutlined sx={{ fontSize: 18 }} /></IconButton>
+            <TableCell align="right" sx={{ width: { xs: 60, sm: 180 }, p: { xs: 0.5, sm: 1.5 } }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} alignItems="center" justifyContent="flex-end">
+                    {record.completedAt ? (
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0} alignItems="center">
+                            <Button size="small" onClick={() => startEditingTime(record, 'completedAt')} sx={{ color: 'var(--text-muted)', textAlign: 'center', p: 0.3, textTransform: 'none', minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <Stack direction="row" spacing={0.3} alignItems="center">
+                                        <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
+                                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '10px' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
+                                    </Stack>
+                                </Box>
+                            </Button>
+                            <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)', p: 0.3 }}><UndoOutlined sx={{ fontSize: 14 }} /></IconButton>
+                        </Stack>
+                    ) : (
+                        <IconButton size="small" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', p: 0.5 }}><CheckCircleOutlined sx={{ fontSize: 20 }} /></IconButton>
+                    )}
+                    <IconButton size="small" onClick={() => handleDeleteTask(record.id)} sx={{ color: 'error.main', opacity: 0.5, '&:hover': { opacity: 1 }, p: 0.5 }}><DeleteOutlined sx={{ fontSize: 18 }} /></IconButton>
+                </Stack>
             </TableCell>
         </TableRow>
     );
