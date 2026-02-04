@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
     Card,
     CardContent,
@@ -14,7 +14,7 @@ interface DurationSummaryProps {
     totalDurationMillis: number;
 }
 
-export const DurationSummary: React.FC<DurationSummaryProps> = ({ totalDurationMillis }) => {
+export const DurationSummary: React.FC<DurationSummaryProps> = memo(({ totalDurationMillis }) => {
     return (
         <Card sx={{ mb: 3, bgcolor: 'rgba(37, 99, 235, 0.05)', border: '1px solid rgba(37, 99, 235, 0.1)' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', py: '12px !important' }}>
@@ -28,4 +28,4 @@ export const DurationSummary: React.FC<DurationSummaryProps> = ({ totalDurationM
             </CardContent>
         </Card>
     );
-};
+});

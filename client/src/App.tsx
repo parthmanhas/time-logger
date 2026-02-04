@@ -42,7 +42,6 @@ const App: React.FC = () => {
   const actions = useTrackerActions();
 
   // Local UI State
-  const [projectTaskNames, setProjectTaskNames] = useState<Record<string, string>>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
@@ -98,9 +97,8 @@ const App: React.FC = () => {
   };
 
   // Wrapped Actions
-  const handleAddTask = (projectId: string) => {
-    actions.handleAddTask(projectId, projectTaskNames[projectId], user?.uid);
-    setProjectTaskNames(prev => ({ ...prev, [projectId]: '' }));
+  const handleAddTask = (projectId: string, taskName: string) => {
+    actions.handleAddTask(projectId, taskName, user?.uid);
   };
 
   const handleCreateProject = async () => {
@@ -218,28 +216,30 @@ const App: React.FC = () => {
   };
 
   // Calculations
-  const baseFilteredTasks = tasks?.filter(task => {
+  const baseFilteredTasks = useMemo(() => tasks?.filter(task => {
     const statusMatch = taskFilter === 'all' || (taskFilter === 'pending' && !task.completedAt) || (taskFilter === 'completed' && !!task.completedAt);
     const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
     return statusMatch && projectMatch;
-  }) || [];
+  }) || [], [tasks, taskFilter, projectFilter]);
 
-  const filteredTasks = baseFilteredTasks.filter(task => {
+  const filteredTasks = useMemo(() => baseFilteredTasks.filter(task => {
     const dateMatch = dateFilter === 'all' || formatDate(task.timestamp, 'YYYY-MM-DD') === dateFilter;
     return dateMatch;
   }).sort((a, b) => {
     const tA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number || 0);
     const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
     return tB - tA;
-  });
+  }), [baseFilteredTasks, dateFilter]);
 
-  const totalDurationMillis = filteredTasks.reduce((acc, task) => acc + (task.duration || 0), 0);
-  const dailyTotals = baseFilteredTasks.reduce((acc: Record<string, number>, task) => {
+  const totalDurationMillis = useMemo(() => filteredTasks.reduce((acc, task) => acc + (task.duration || 0), 0), [filteredTasks]);
+
+  const dailyTotals = useMemo(() => baseFilteredTasks.reduce((acc: Record<string, number>, task) => {
     const dateStr = formatDate(task.timestamp, 'YYYY-MM-DD');
     acc[dateStr] = (acc[dateStr] || 0) + (task.duration || 0);
     return acc;
-  }, {});
-  const sortedDays = Object.keys(dailyTotals).sort((a, b) => b.localeCompare(a)).slice(0, 14);
+  }, {}), [baseFilteredTasks]);
+
+  const sortedDays = useMemo(() => Object.keys(dailyTotals).sort((a, b) => b.localeCompare(a)).slice(0, 14), [dailyTotals]);
 
   return (
     <ThemeProvider theme={muiTheme}>
@@ -291,8 +291,6 @@ const App: React.FC = () => {
                     selectedProjectId={selectedProjectId}
                     setSelectedProjectId={setSelectedProjectId}
                     handleRenameProject={handleRenameProject}
-                    projectTaskNames={projectTaskNames}
-                    setProjectTaskNames={setProjectTaskNames}
                     handleAddTask={handleAddTask}
                   />
 

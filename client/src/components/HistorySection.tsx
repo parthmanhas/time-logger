@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
     Box,
     Typography,
@@ -51,7 +51,7 @@ interface HistorySectionProps {
     setEditingValue: (val: string) => void;
 }
 
-export const HistorySection: React.FC<HistorySectionProps> = ({
+export const HistorySection: React.FC<HistorySectionProps> = memo(({
     filteredTasks,
     taskFilter,
     setTaskFilter,
@@ -154,4 +154,4 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
             </TableContainer>
         </Box>
     );
-};
+});
