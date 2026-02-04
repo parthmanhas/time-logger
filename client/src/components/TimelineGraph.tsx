@@ -7,7 +7,6 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Cell
 } from 'recharts';
 import { Box, Typography, Card, CardContent, useTheme, Divider } from '@mui/material';
 import dayjs from 'dayjs';
@@ -100,15 +99,15 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
     const chartHeight = 80;
 
     return (
-        <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)' }}>
-            <CardContent sx={{ p: 2 }}>
+        <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', overflow: 'visible' }}>
+            <CardContent sx={{ p: 2, overflow: 'visible' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 700 }}>PULSE TIMELINE</Typography>
                     <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
                         {chartData.data.length} Finished Logs
                     </Typography>
                 </Box>
-                <Box sx={{ width: '100%', height: chartHeight }}>
+                <Box sx={{ width: '100%', height: chartHeight, overflow: 'visible' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                             layout="vertical"
@@ -138,6 +137,7 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                                 shared={false}
                                 isAnimationActive={false}
                                 animationDuration={0}
+                                allowEscapeViewBox={{ x: true, y: true }}
                             />
                             {chartData.taskKeys.map((key, index) => (
                                 <Bar
