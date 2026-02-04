@@ -79,6 +79,7 @@ const App: React.FC = () => {
     shape: { borderRadius: 'var(--border-radius)' as any },
     components: {
       MuiButton: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600 } } },
+      MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
       MuiCard: { styleOverrides: { root: { backgroundImage: 'none', border: '1px solid rgba(255, 255, 255, 0.1)' } } },
     },
   }), [selectedTheme]);
