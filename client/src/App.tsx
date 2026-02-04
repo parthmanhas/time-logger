@@ -562,7 +562,7 @@ const App: React.FC = () => {
                   <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)' }}><UndoOutlined fontSize="small" /></IconButton>
                 </Stack>
               ) : (
-                <Button size="small" variant="outlined" startIcon={<CheckCircleOutlined />} onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', fontSize: '12px' }}>Complete</Button>
+                <Button size="small" variant="outlined" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', minWidth: 0, p: 0.5 }}><CheckCircleOutlined fontSize="small" /></Button>
               )}
             </Box>
           </Box>
