@@ -3,14 +3,12 @@ import {
     Box,
     Typography,
     Stack,
-    Button,
     Select,
     MenuItem,
     Menu,
     IconButton,
 } from '@mui/material';
 import {
-    Google as GoogleIcon,
     Logout as LogoutIcon,
     Person as UserIcon,
     Settings as SettingsIcon,
@@ -22,10 +20,7 @@ interface HeaderProps {
     handleLogin: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({
-    user,
-    handleLogin,
-}) => {
+export const Header: React.FC<HeaderProps> = () => {
     return (
         <Box sx={{
             display: 'flex',

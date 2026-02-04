@@ -53,7 +53,6 @@ const App: React.FC = () => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | 'name' | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-  const [editingDateValue, setEditingDateValue] = useState<dayjs.Dayjs | null>(null);
 
   const [currentTheme, setCurrentTheme] = useState<string>('default');
   const [ideaContent, setIdeaContent] = useState('');
@@ -144,7 +143,6 @@ const App: React.FC = () => {
     const ts = task[field];
     const date = ts instanceof Timestamp ? ts.toDate() : ts;
     setEditingValue(dayjs(date || Date.now()).format('YYYY-MM-DDTHH:mm'));
-    setEditingDateValue(dayjs(date || Date.now()));
   };
 
   const startEditingTaskName = (task: Task) => {
