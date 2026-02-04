@@ -75,58 +75,6 @@ body {
   transform: none !important;
 }
 
-/* Ant Design Overrides */
-.ant-layout {
-  background-color: transparent !important;
-}
-
-.ant-table {
-  background: transparent !important;
-  color: var(--text-main) !important;
-}
-
-.ant-table-thead>tr>th {
-  background: #1e293b !important;
-  color: var(--text-muted) !important;
-  border-bottom: 2px solid var(--bg-main) !important;
-  font-weight: 600 !important;
-  font-size: 12px;
-}
-
-.ant-table-tbody>tr>td {
-  border-bottom: 1px solid var(--border-color) !important;
-  color: var(--text-main) !important;
-  padding: 16px !important;
-}
-
-.ant-table-tbody>tr:hover>td {
-  background: #2d3a4f !important;
-}
-
-.ant-input,
-.ant-input-affix-wrapper {
-  background-color: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--text-main) !important;
-  border-radius: 8px;
-}
-
-.ant-input::placeholder {
-  color: var(--text-muted) !important;
-}
-
-.ant-select-selector {
-  background-color: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--text-main) !important;
-  border-radius: 8px !important;
-}
-
-.ant-card {
-  background-color: var(--bg-card) !important;
-  border: 1px solid var(--border-color) !important;
-}
-
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -142,45 +90,6 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
-}
-
-/* Tabs Styling */
-.custom-tabs .ant-tabs-nav {
-  margin-bottom: 32px !important;
-}
-
-.custom-tabs .ant-tabs-tab {
-  padding: 12px 24px !important;
-  margin: 0 !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border-bottom: 2px solid transparent !important;
-}
-
-.custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--primary-color) !important;
-  font-weight: 600 !important;
-}
-
-.custom-tabs .ant-tabs-ink-bar {
-  background: var(--primary-color) !important;
-  height: 3px !important;
-}
-
-.custom-tabs .ant-tabs-tab:hover {
-  color: var(--accent-color) !important;
-}
-
-.custom-tabs .ant-tabs-tab .anticon {
-  margin-right: 8px;
-}
-
-.ant-tabs-top>.ant-tabs-nav::before {
-  border-bottom: 1px solid var(--border-color) !important;
-}
-
-/* Ideas specific styling */
-.ant-input-textarea-show-count::after {
-  color: var(--text-muted) !important;
 }
 
 /* Animations */
@@ -200,21 +109,15 @@ body {
   animation: fadeIn 0.8s ease-out forwards;
 }
 
-/* Compact Group Overrides */
-.ant-space-compact-item.ant-input {
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .daily-activity-container {
+    margin: 0 -12px;
+    padding: 0 12px 12px 12px;
+  }
 
-.ant-space-compact-item.ant-btn {
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-
-/* Tutorial Highlighting */
-.tutorial-active-input {
-  transition: all 0.2s ease !important;
-  border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.4) !important;
-  transform: scale(1.02);
+  /* History list tweaks */
+  .MuiTableCell-root {
+    padding: 12px 8px !important;
+  }
 }
