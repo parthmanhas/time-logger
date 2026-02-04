@@ -232,6 +232,12 @@ const App: React.FC = () => {
     return tB - tA;
   }), [baseFilteredTasks, dateFilter]);
 
+  const graphTasks = useMemo(() => {
+    if (dateFilter !== 'all') return filteredTasks;
+    const today = dayjs().format('YYYY-MM-DD');
+    return filteredTasks.filter(task => formatDate(task.timestamp, 'YYYY-MM-DD') === today);
+  }, [filteredTasks, dateFilter]);
+
   const totalDurationMillis = useMemo(() => filteredTasks.reduce((acc, task) => acc + (task.duration || 0), 0), [filteredTasks]);
 
   const dailyTotals = useMemo(() => baseFilteredTasks.reduce((acc: Record<string, number>, task) => {
@@ -295,7 +301,7 @@ const App: React.FC = () => {
                     handleAddTask={handleAddTask}
                   />
 
-                  <TimelineGraph tasks={filteredTasks} />
+                  <TimelineGraph tasks={graphTasks} />
 
                   {filteredTasks.length > 0 && <DurationSummary totalDurationMillis={totalDurationMillis} />}
 
