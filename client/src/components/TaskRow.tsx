@@ -81,14 +81,19 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     </Stack>
                 ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Box onClick={() => startEditingTime(record, 'timestamp')} sx={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+                        <Box
+                            onClick={() => !record.completedAt && startEditingTime(record, 'timestamp')}
+                            sx={{ cursor: record.completedAt ? 'default' : 'pointer', display: 'flex', flexDirection: 'column' }}
+                        >
                             <Typography variant="subtitle2" sx={{ color: 'var(--text-main)', fontSize: { xs: '12px', sm: '14px' }, lineHeight: 1 }}>{formatDate(ts, 'HH:mm')}</Typography>
                             <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '10px' }}>{formatDate(ts, 'MMM DD')}</Typography>
                         </Box>
-                        <Stack direction="row" spacing={0.5}>
-                            <IconButton size="small" onClick={() => startEditingTime(record, 'timestamp')} sx={{ p: 0.3, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 10 }} /></IconButton>
-                            <IconButton size="small" onClick={() => updateToNow(record.id, 'timestamp')} sx={{ color: 'var(--text-muted)', p: 0.3 }}><ClockIcon sx={{ fontSize: 12 }} /></IconButton>
-                        </Stack>
+                        {!record.completedAt && (
+                            <Stack direction="row" spacing={0.5}>
+                                <IconButton size="small" onClick={() => startEditingTime(record, 'timestamp')} sx={{ p: 0.3, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 10 }} /></IconButton>
+                                <IconButton size="small" onClick={() => updateToNow(record.id, 'timestamp')} sx={{ color: 'var(--text-muted)', p: 0.3 }}><ClockIcon sx={{ fontSize: 12 }} /></IconButton>
+                            </Stack>
+                        )}
                     </Box>
                 )}
             </TableCell>
@@ -101,9 +106,22 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             <IconButton onClick={() => { setEditingTaskId(null); setEditingField(null); }} sx={{ color: '#ef4444' }}><CloseOutlined fontSize="small" /></IconButton>
                         </Stack>
                     ) : (
-                        <Typography variant="body1" onClick={() => startEditingTaskName(record)} sx={{ color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)', fontSize: { xs: '13px', sm: '15px' }, fontWeight: 500, textDecoration: record.completedAt ? 'line-through' : 'none', cursor: 'pointer', '&:hover': { color: 'primary.main' }, wordBreak: 'break-word', lineHeight: 1.2 }}>
+                        <Typography
+                            variant="body1"
+                            onClick={() => !record.completedAt && startEditingTaskName(record)}
+                            sx={{
+                                color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)',
+                                fontSize: { xs: '13px', sm: '15px' },
+                                fontWeight: 500,
+                                textDecoration: record.completedAt ? 'line-through' : 'none',
+                                cursor: record.completedAt ? 'default' : 'pointer',
+                                '&:hover': { color: record.completedAt ? 'var(--text-muted)' : 'primary.main' },
+                                wordBreak: 'break-word',
+                                lineHeight: 1.2
+                            }}
+                        >
                             {record.name}
-                            <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />
+                            {!record.completedAt && <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />}
                         </Typography>
                     )}
                     <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
