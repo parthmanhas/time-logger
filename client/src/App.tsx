@@ -526,7 +526,7 @@ const App: React.FC = () => {
                 <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '11px' }}>{formatDate(ts, 'MMM DD')}</Typography>
               </Box>
               <IconButton size="small" onClick={() => startEditingTime(record, 'timestamp')} sx={{ p: 0.5, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 10 }} /></IconButton>
-              <Button size="small" onClick={() => updateToNow(record.id, 'timestamp')} sx={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: 0, p: 0.5 }}>Now</Button>
+              <IconButton size="small" onClick={() => updateToNow(record.id, 'timestamp')} sx={{ color: 'var(--text-muted)', p: 0.5 }}><ClockIcon sx={{ fontSize: 14 }} /></IconButton>
             </Box>
           )}
         </TableCell>
