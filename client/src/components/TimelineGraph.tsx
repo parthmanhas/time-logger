@@ -64,8 +64,6 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                 return startA - startB;
             });
 
-        console.log(sortedTasks)
-
         const dataObj: any = { lane: 'Timeline' };
         const taskKeys: string[] = [];
 

@@ -9,6 +9,7 @@ import {
   Tab,
   Container,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import {
   AccessTime as ClockIcon,
@@ -39,7 +40,7 @@ import { IdeasSection } from './components/IdeasSection';
 import { TimelineGraph } from './components/TimelineGraph';
 
 const App: React.FC = () => {
-  const { user, projects, tasks, ideas } = useTrackerData();
+  const { user, projects, tasks, ideas, loading } = useTrackerData();
   const actions = useTrackerActions();
 
   // Local UI State
@@ -275,76 +276,84 @@ const App: React.FC = () => {
                 />
               </Box>
 
-              {activeTab === '1' && (
-                <Box>
-                  <ProjectSection
-                    projects={projects}
-                    isFocusMode={isFocusMode}
-                    setIsFocusMode={setIsFocusMode}
-                    isAddingProject={isAddingProject}
-                    setIsAddingProject={setIsAddingProject}
-                    newProjectName={newProjectName}
-                    setNewProjectName={setNewProjectName}
-                    newProjectDescription={newProjectDescription}
-                    setNewProjectDescription={setNewProjectDescription}
-                    handleAddProject={handleCreateProject}
-                    handleToggleProjectFocus={actions.handleToggleProjectFocus}
-                    isRenamingProject={isRenamingProject}
-                    setIsRenamingProject={setIsRenamingProject}
-                    selectedProjectId={selectedProjectId}
-                    setSelectedProjectId={setSelectedProjectId}
-                    handleRenameProject={handleRenameProject}
-                    handleAddTask={handleAddTask}
-                  />
-
-                  <TimelineGraph tasks={graphTasks} />
-
-                  {filteredTasks.length > 0 && <DurationSummary totalDurationMillis={totalDurationMillis} />}
-
-                  <HistorySection
-                    filteredTasks={filteredTasks}
-                    taskFilter={taskFilter}
-                    setTaskFilter={setTaskFilter}
-                    exportToCSV={exportToCSV}
-                    projectFilter={projectFilter}
-                    setProjectFilter={setProjectFilter}
-                    dateFilter={dateFilter}
-                    setDateFilter={setDateFilter}
-                    projects={projects}
-                    sortedDays={sortedDays}
-                    dailyTotals={dailyTotals}
-                    editingTaskId={editingTaskId}
-                    editingField={editingField}
-                    editingValue={editingValue}
-                    startEditingTime={startEditingTime}
-                    startEditingTaskName={startEditingTaskName}
-                    saveEditedTime={saveEditedTime}
-                    saveEditedTaskName={saveEditedTaskName}
-                    updateToNow={updateToNow}
-                    handleCompleteTask={actions.handleCompleteTask}
-                    handleUncompleteTask={actions.handleUncompleteTask}
-                    handleDeleteTask={actions.handleDeleteTask}
-                    setEditingTaskId={setEditingTaskId}
-                    setEditingField={setEditingField}
-                    setEditingValue={setEditingValue}
-                  />
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                  <CircularProgress />
                 </Box>
-              )}
+              ) : (
+                <>
+                  {activeTab === '1' && (
+                    <Box>
+                      <ProjectSection
+                        projects={projects}
+                        isFocusMode={isFocusMode}
+                        setIsFocusMode={setIsFocusMode}
+                        isAddingProject={isAddingProject}
+                        setIsAddingProject={setIsAddingProject}
+                        newProjectName={newProjectName}
+                        setNewProjectName={setNewProjectName}
+                        newProjectDescription={newProjectDescription}
+                        setNewProjectDescription={setNewProjectDescription}
+                        handleAddProject={handleCreateProject}
+                        handleToggleProjectFocus={actions.handleToggleProjectFocus}
+                        isRenamingProject={isRenamingProject}
+                        setIsRenamingProject={setIsRenamingProject}
+                        selectedProjectId={selectedProjectId}
+                        setSelectedProjectId={setSelectedProjectId}
+                        handleRenameProject={handleRenameProject}
+                        handleAddTask={handleAddTask}
+                      />
 
-              {activeTab === '2' && (
-                <IdeasSection
-                  ideaContent={ideaContent}
-                  setIdeaContent={setIdeaContent}
-                  handleAddIdea={() => actions.handleAddIdea(ideaContent, user?.uid).then(() => setIdeaContent(''))}
-                  ideas={ideas}
-                  editingIdeaNotesId={editingIdeaNotesId}
-                  setEditingIdeaNotesId={setEditingIdeaNotesId}
-                  tempNotes={tempNotes}
-                  setTempNotes={setTempNotes}
-                  handleUpdateIdeaNotes={handleUpdateIdeaNotes}
-                  handleCreateProjectFromIdea={handleCreateProjectFromIdea}
-                  handleDeleteIdea={actions.handleDeleteIdea}
-                />
+                      <TimelineGraph tasks={graphTasks} />
+
+                      {filteredTasks.length > 0 && <DurationSummary totalDurationMillis={totalDurationMillis} />}
+
+                      <HistorySection
+                        filteredTasks={filteredTasks}
+                        taskFilter={taskFilter}
+                        setTaskFilter={setTaskFilter}
+                        exportToCSV={exportToCSV}
+                        projectFilter={projectFilter}
+                        setProjectFilter={setProjectFilter}
+                        dateFilter={dateFilter}
+                        setDateFilter={setDateFilter}
+                        projects={projects}
+                        sortedDays={sortedDays}
+                        dailyTotals={dailyTotals}
+                        editingTaskId={editingTaskId}
+                        editingField={editingField}
+                        editingValue={editingValue}
+                        startEditingTime={startEditingTime}
+                        startEditingTaskName={startEditingTaskName}
+                        saveEditedTime={saveEditedTime}
+                        saveEditedTaskName={saveEditedTaskName}
+                        updateToNow={updateToNow}
+                        handleCompleteTask={actions.handleCompleteTask}
+                        handleUncompleteTask={actions.handleUncompleteTask}
+                        handleDeleteTask={actions.handleDeleteTask}
+                        setEditingTaskId={setEditingTaskId}
+                        setEditingField={setEditingField}
+                        setEditingValue={setEditingValue}
+                      />
+                    </Box>
+                  )}
+
+                  {activeTab === '2' && (
+                    <IdeasSection
+                      ideaContent={ideaContent}
+                      setIdeaContent={setIdeaContent}
+                      handleAddIdea={() => actions.handleAddIdea(ideaContent, user?.uid).then(() => setIdeaContent(''))}
+                      ideas={ideas}
+                      editingIdeaNotesId={editingIdeaNotesId}
+                      setEditingIdeaNotesId={setEditingIdeaNotesId}
+                      tempNotes={tempNotes}
+                      setTempNotes={setTempNotes}
+                      handleUpdateIdeaNotes={handleUpdateIdeaNotes}
+                      handleCreateProjectFromIdea={handleCreateProjectFromIdea}
+                      handleDeleteIdea={actions.handleDeleteIdea}
+                    />
+                  )}
+                </>
               )}
             </Box>
           )}
