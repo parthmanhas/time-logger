@@ -100,9 +100,14 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />
                         </Typography>
                     )}
-                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
                         {project && <Chip size="small" label={project.name} variant="outlined" sx={{ fontSize: '10px', height: 20, borderColor: 'primary.main', color: 'primary.main' }} />}
                         {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
+                        {record.createdAt && (
+                            <Typography variant="caption" sx={{ fontSize: '9px', color: 'var(--text-muted)', ml: 'auto' }}>
+                                Created: {formatDate(record.createdAt, 'HH:mm')}
+                            </Typography>
+                        )}
                     </Stack>
                 </Box>
             </TableCell>

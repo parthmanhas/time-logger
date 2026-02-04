@@ -19,6 +19,7 @@ export const useTrackerActions = () => {
                 name: taskName,
                 projectId: projectId,
                 timestamp: serverTimestamp(),
+                createdAt: serverTimestamp(),
             });
         } catch (error) {
             console.error('Error adding task:', error);

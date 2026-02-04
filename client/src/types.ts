@@ -17,6 +17,7 @@ export interface Task {
     timestamp: FirestoreDate;
     completedAt?: FirestoreDate;
     duration?: number;
+    createdAt: FirestoreDate;
 }
 
 export interface Idea {
