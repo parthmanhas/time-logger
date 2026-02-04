@@ -3,6 +3,7 @@ import {
     BarChart,
     Bar,
     XAxis,
+    YAxis,
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
@@ -18,11 +19,9 @@ interface TimelineGraphProps {
     tasks: Task[];
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
-        if (data.count === 0) return null;
-
         return (
             <Box sx={{
                 bgcolor: 'var(--bg-paper)',
@@ -34,47 +33,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 maxWidth: 240
             }}>
                 <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontWeight: 700 }}>
-                    {label}:00 - {label}:59
+                    {data.startTimeStr} - {data.endTimeStr}
                 </Typography>
-
-                <Box sx={{ mb: 1.5 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>Total Time:</Typography>
-                        <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                            {formatTotalDuration(data.totalDuration)}
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>Logs:</Typography>
-                        <Typography variant="caption" sx={{ color: 'var(--text-main)', fontWeight: 700 }}>
-                            {data.count}
-                        </Typography>
-                    </Box>
-                </Box>
-
-                <Divider sx={{ mb: 1, opacity: 0.1 }} />
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    {data.taskNames.map((name: string, i: number) => (
-                        <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'primary.main', mt: 0.8, flexShrink: 0 }} />
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    fontSize: '11px',
-                                    color: 'var(--text-main)',
-                                    lineHeight: 1.2,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical'
-                                }}
-                            >
-                                {name}
-                            </Typography>
-                        </Box>
-                    ))}
+                <Typography variant="body2" sx={{ color: 'var(--text-main)', fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
+                    {data.taskName}
+                </Typography>
+                <Divider sx={{ my: 1, opacity: 0.1 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>Duration:</Typography>
+                    <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                        {formatTotalDuration(data.duration)}
+                    </Typography>
                 </Box>
             </Box>
         );
@@ -85,79 +54,98 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
     const theme = useTheme();
 
-    const data = useMemo(() => {
-        // Initialize 24 hours
-        const hours = Array.from({ length: 24 }, (_, i) => ({
-            hour: i,
-            count: 0,
-            totalDuration: 0,
-            taskNames: [] as string[]
-        }));
+    const chartData = useMemo(() => {
+        // Group tasks into lanes to avoid overlap
+        const sortedTasks = [...tasks]
+            .filter(t => t.completedAt)
+            .sort((a, b) => {
+                const startA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number);
+                const startB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number);
+                return startA - startB;
+            });
 
-        tasks.forEach(task => {
-            if (!task.completedAt) return; // Only show completed tasks in the graph
+        const lanes: { end: number }[] = [];
+        const result = sortedTasks.map(task => {
+            const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : (task.timestamp as number);
+            const endTs = task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt as number);
 
-            const ts = task.timestamp;
-            const date = ts instanceof Timestamp ? ts.toDate() : (typeof ts === 'number' ? new Date(ts) : null);
-            if (date) {
-                const hour = dayjs(date).hour();
-                hours[hour].count += 1;
-                hours[hour].totalDuration += (task.duration || 0);
-                if (task.name && !hours[hour].taskNames.includes(task.name)) {
-                    hours[hour].taskNames.push(task.name);
-                }
+            const startDate = new Date(startTs);
+            const endDate = new Date(endTs);
+
+            const startMin = dayjs(startDate).hour() * 60 + dayjs(startDate).minute();
+            const endMin = dayjs(endDate).hour() * 60 + dayjs(endDate).minute();
+
+            // Find first lane that doesn't conflict
+            let laneIndex = lanes.findIndex(l => l.end <= startMin);
+            if (laneIndex === -1) {
+                laneIndex = lanes.length;
+                lanes.push({ end: endMin });
+            } else {
+                lanes[laneIndex].end = endMin;
             }
+
+            return {
+                taskName: task.name,
+                timeRange: [startMin, Math.max(startMin + 1, endMin)], // Ensure at least 1 min width
+                duration: (task.duration || 0),
+                startTimeStr: dayjs(startDate).format('HH:mm'),
+                endTimeStr: dayjs(endDate).format('HH:mm'),
+                lane: laneIndex
+            };
         });
 
-        // Limit shown task names in tooltip if there are too many
-        hours.forEach(h => {
-            if (h.taskNames.length > 5) {
-                const extraCount = h.taskNames.length - 5;
-                h.taskNames = h.taskNames.slice(0, 5);
-                h.taskNames.push(`+ ${extraCount} more...`);
-            }
-        });
-
-        return hours;
+        return { data: result, laneCount: lanes.length };
     }, [tasks]);
 
-    const activeHoursCount = data.filter(h => h.count > 0).length;
+    if (tasks.length === 0 || chartData.data.length === 0) return null;
 
-    if (tasks.length === 0) return null;
+    const chartHeight = Math.max(chartData.laneCount * 35 + 50, 120);
 
     return (
         <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)' }}>
             <CardContent sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 700 }}>24HR COMPLETED ACTIVITY</Typography>
+                    <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 700 }}>PULSE TIMELINE</Typography>
                     <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                        {activeHoursCount} Productive Hours
+                        {chartData.data.length} Finished Logs
                     </Typography>
                 </Box>
-                <Box sx={{ width: '100%', height: 120 }}>
+                <Box sx={{ width: '100%', height: chartHeight }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <BarChart
+                            layout="vertical"
+                            data={chartData.data}
+                            margin={{ top: 5, right: 30, left: -20, bottom: 5 }}
+                        >
                             <XAxis
-                                dataKey="hour"
-                                tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
+                                type="number"
+                                domain={[0, 1440]}
+                                ticks={[0, 240, 480, 720, 960, 1200, 1440]}
+                                tickFormatter={(tick) => `${Math.floor(tick / 60)}h`}
+                                fontSize={10}
+                                tick={{ fill: 'var(--text-muted)' }}
                                 axisLine={false}
                                 tickLine={false}
-                                interval={3}
-                                tickFormatter={(value) => `${value}h`}
                             />
-                            <Tooltip
-                                content={<CustomTooltip />}
-                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            <YAxis
+                                type="category"
+                                dataKey="lane"
+                                hide
                             />
+                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                             <Bar
-                                dataKey="count"
-                                radius={[2, 2, 0, 0]}
+                                dataKey="timeRange"
+                                fill={theme.palette.primary.main}
+                                radius={0}
+                                barSize={24}
                             >
-                                {data.map((entry, index) => (
+                                {chartData.data.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
-                                        fill={entry.count > 0 ? theme.palette.primary.main : 'rgba(255,255,255,0.05)'}
+                                        fill={theme.palette.primary.main}
+                                        fillOpacity={0.8}
+                                        stroke={theme.palette.primary.main}
+                                        strokeWidth={1}
                                     />
                                 ))}
                             </Bar>
