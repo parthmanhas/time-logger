@@ -13,6 +13,11 @@ export const useTrackerData = () => {
     const [user] = useAuthState(auth);
     const isDebugEnabled = import.meta.env.VITE_ENABLE_FIRESTORE_DEBUG === 'true';
 
+    // Temporary check to confirm if env variable is being read correctly
+    if (user && isDebugEnabled) {
+        console.log("Firestore Debug Mode: ACTIVE");
+    }
+
     const [projectsSnapshot, projectsLoading, projectsError] = useCollection(
         user ? query(
             collection(db, 'projects'),
@@ -21,9 +26,15 @@ export const useTrackerData = () => {
         ) : null
     );
 
-    if (isDebugEnabled && projectsSnapshot) {
-        console.log(`Diagnostic: User ID: ${user?.uid}, Projects found: ${projectsSnapshot.size}`);
+    if (isDebugEnabled) {
+        console.log("Projects State:", {
+            loading: projectsLoading,
+            hasError: !!projectsError,
+            error: projectsError?.message,
+            count: projectsSnapshot?.size
+        });
     }
+
     if (projectsError) console.error("Firestore Projects Error:", projectsError);
     const projects = projectsSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project));
 

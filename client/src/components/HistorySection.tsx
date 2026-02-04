@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import {
     Box,
     Typography,
@@ -14,6 +14,7 @@ import {
     TableRow,
     TableCell,
     Paper,
+    Pagination,
 } from '@mui/material';
 import {
     Download as DownloadIcon,
@@ -51,6 +52,8 @@ interface HistorySectionProps {
     setEditingValue: (val: string) => void;
 }
 
+const TASKS_PER_PAGE = 10;
+
 export const HistorySection: React.FC<HistorySectionProps> = memo(({
     filteredTasks,
     taskFilter,
@@ -65,6 +68,15 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
     dailyTotals,
     ...taskRowProps
 }) => {
+    const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        setPage(1);
+    }, [taskFilter, projectFilter, dateFilter]);
+
+    const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE);
+    const paginatedTasks = filteredTasks.slice((page - 1) * TASKS_PER_PAGE, page * TASKS_PER_PAGE);
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -137,8 +149,8 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredTasks.length > 0 ? (
-                            filteredTasks.map(task => (
+                        {paginatedTasks.length > 0 ? (
+                            paginatedTasks.map(task => (
                                 <TaskRow
                                     key={task.id}
                                     record={task}
@@ -152,6 +164,26 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                    <Pagination
+                        count={totalPages}
+                        page={page}
+                        onChange={(_, v) => setPage(v)}
+                        color="primary"
+                        size="small"
+                        sx={{
+                            '& .MuiPaginationItem-root': {
+                                color: 'var(--text-muted)',
+                                '&.Mui-selected': {
+                                    color: 'white',
+                                }
+                            }
+                        }}
+                    />
+                </Box>
+            )}
         </Box>
     );
 });
