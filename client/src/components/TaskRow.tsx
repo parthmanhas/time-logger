@@ -22,6 +22,7 @@ import {
 import type { Task, Project } from '../types';
 import { formatDate, formatDuration } from '../utils/dateUtils';
 import { Timestamp } from 'firebase/firestore';
+import { getDeterministicColor } from '../constants/colors';
 
 interface TaskRowProps {
     record: Task;
@@ -60,11 +61,17 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     setEditingField,
     setEditingValue,
 }) => {
+    const projectColor = project?.color || (project?.id ? getDeterministicColor(project.id) : '#3b82f6');
     const ts = record.timestamp instanceof Timestamp ? record.timestamp.toMillis() : record.timestamp;
 
     return (
-        <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-            <TableCell sx={{ width: { xs: 85, sm: 110 }, p: { xs: 0.5, sm: 1.5 } }}>
+        <TableRow sx={{ '& td': { borderBottom: '1px solid rgba(255,255,255,0.05)' } }}>
+            <TableCell sx={{
+                width: { xs: 85, sm: 110 },
+                p: { xs: 0.5, sm: 1.5 },
+                borderLeft: `4px solid ${projectColor}`,
+            }}>
+
                 {editingTaskId === record.id && editingField === 'timestamp' ? (
                     <Stack spacing={0.5}>
                         <TextField
@@ -125,7 +132,20 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                         </Typography>
                     )}
                     <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
-                        {project && <Chip size="small" label={project.name} variant="outlined" sx={{ fontSize: '10px', height: 20, borderColor: 'primary.main', color: 'primary.main' }} />}
+                        {project && (
+                            <Chip
+                                size="small"
+                                label={project.name}
+                                variant="outlined"
+                                sx={{
+                                    fontSize: '10px',
+                                    height: 20,
+                                    borderColor: projectColor,
+                                    color: projectColor,
+                                    bgcolor: `${projectColor}1A` // 1A is ~10% opacity in hex
+                                }}
+                            />
+                        )}
                         {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
                         {record.createdAt && (
                             <Typography variant="caption" sx={{ fontSize: '9px', color: 'var(--text-muted)', ml: 'auto' }}>

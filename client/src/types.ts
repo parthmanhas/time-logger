@@ -8,6 +8,7 @@ export interface Project {
     name: string;
     description?: string;
     isFocused?: boolean;
+    color?: string;
     createdAt: FirestoreDate;
 }
 

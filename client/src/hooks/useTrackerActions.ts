@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Task } from '../types';
+import { getRandomProjectColor } from '../constants/colors';
 
 export const useTrackerActions = () => {
     const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined) => {
@@ -34,6 +35,7 @@ export const useTrackerActions = () => {
                 name,
                 description,
                 userId,
+                color: getRandomProjectColor(),
                 createdAt: serverTimestamp(),
             });
         } catch (error) {

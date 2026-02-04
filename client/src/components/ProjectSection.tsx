@@ -19,6 +19,7 @@ import {
     EditOutlined,
 } from '@mui/icons-material';
 import type { Project } from '../types';
+import { getDeterministicColor } from '../constants/colors';
 
 interface ProjectRowProps {
     project: Project;
@@ -54,8 +55,21 @@ const ProjectRow = memo(({
         setTaskName('');
     };
 
+    const projectColor = project.color || getDeterministicColor(project.id);
+
     return (
-        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', p: { xs: '4px 8px', sm: '6px 12px' }, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', '&:hover': { borderColor: 'primary.main' } }}>
+        <Box sx={{
+            display: 'flex',
+            gap: { xs: 1, sm: 1.5 },
+            alignItems: 'center',
+            p: { xs: '4px 8px', sm: '6px 12px' },
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: 'var(--border-radius)',
+            border: '1px solid',
+            borderColor: 'var(--border-color)',
+            borderLeft: `3px solid ${projectColor}`,
+            '&:hover': { borderColor: projectColor }
+        }}>
             <Box
                 sx={{
                     width: isExpanded ? { xs: 'auto', sm: 140 } : { xs: 80, sm: 140 },
@@ -70,7 +84,7 @@ const ProjectRow = memo(({
                 <IconButton
                     size="small"
                     onClick={() => handleToggleProjectFocus(project.id, !!project.isFocused)}
-                    sx={{ color: project.isFocused ? 'primary.main' : 'rgba(255,255,255,0.2)', p: 0.2, mr: 0.5, flexShrink: 0 }}
+                    sx={{ color: project.isFocused ? projectColor : 'rgba(255,255,255,0.2)', p: 0.2, mr: 0.5, flexShrink: 0 }}
                 >
                     {project.isFocused ? <PushPin sx={{ fontSize: { xs: 12, sm: 16 } }} /> : <PushPinOutlined sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                 </IconButton>
@@ -210,7 +224,8 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                     </Stack>
                 </Box>
                 {isAddingProject && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3, p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 1, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                        <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>NEW PROJECT PREVIEW</Typography>
                         <TextField
                             fullWidth
                             size="small"
