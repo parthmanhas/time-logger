@@ -36,6 +36,7 @@ import { ProjectSection } from './components/ProjectSection';
 import { DurationSummary } from './components/DurationSummary';
 import { HistorySection } from './components/HistorySection';
 import { IdeasSection } from './components/IdeasSection';
+import { TimelineGraph } from './components/TimelineGraph';
 
 const App: React.FC = () => {
   const { user, projects, tasks, ideas } = useTrackerData();
@@ -293,6 +294,8 @@ const App: React.FC = () => {
                     handleRenameProject={handleRenameProject}
                     handleAddTask={handleAddTask}
                   />
+
+                  <TimelineGraph tasks={filteredTasks} />
 
                   {filteredTasks.length > 0 && <DurationSummary totalDurationMillis={totalDurationMillis} />}
 
