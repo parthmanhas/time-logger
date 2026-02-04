@@ -132,7 +132,13 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                                 dataKey="lane"
                                 hide
                             />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                cursor={{ fill: 'rgba(255,255,255, 0.02)' }}
+                                shared={false}
+                                isAnimationActive={false}
+                                animationDuration={0}
+                            />
                             <Bar
                                 dataKey="timeRange"
                                 fill={theme.palette.primary.main}
