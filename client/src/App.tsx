@@ -554,9 +554,12 @@ const App: React.FC = () => {
               {record.completedAt ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Button size="small" onClick={() => startEditingTime(record, 'completedAt')} sx={{ color: 'var(--text-muted)', textAlign: 'left', p: 0.5, textTransform: 'none' }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600 }}>Ended {formatDate(record.completedAt, 'HH:mm')}</Typography>
-                      <Typography sx={{ fontSize: '9px', opacity: 0.7 }}>{formatDate(record.completedAt, 'MMM DD')}</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
+                      </Stack>
+                      <Typography sx={{ fontSize: '9px', opacity: 0.7, ml: 2.2 }}>{formatDate(record.completedAt, 'MMM DD')}</Typography>
                     </Box>
                   </Button>
                   <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)' }}><UndoOutlined fontSize="small" /></IconButton>
