@@ -139,13 +139,13 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                                 isAnimationActive={false}
                                 animationDuration={0}
                             />
-                            {chartData.taskKeys.map((key) => (
+                            {chartData.taskKeys.map((key, index) => (
                                 <Bar
                                     key={key}
                                     dataKey={key}
-                                    fill={theme.palette.primary.main}
+                                    fill={index % 2 === 0 ? theme.palette.primary.main : theme.palette.primary.dark}
                                     radius={0}
-                                    stroke={theme.palette.primary.main}
+                                    stroke={index % 2 === 0 ? theme.palette.primary.main : theme.palette.primary.dark}
                                     strokeWidth={1}
                                     fillOpacity={0.8}
                                 />
