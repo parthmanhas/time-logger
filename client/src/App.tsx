@@ -31,7 +31,7 @@ import { formatDate } from './utils/dateUtils';
 import { useTrackerData } from './hooks/useTrackerData';
 import { useTrackerActions } from './hooks/useTrackerActions';
 
-import { Header } from './components/Header';
+import { Header, SettingsMenu } from './components/Header';
 import { ProjectSection } from './components/ProjectSection';
 import { DurationSummary } from './components/DurationSummary';
 import { HistorySection } from './components/HistorySection';
@@ -249,9 +249,6 @@ const App: React.FC = () => {
           <Header
             user={user}
             handleLogin={handleLogin}
-            handleLogout={handleLogout}
-            currentTheme={currentTheme}
-            setCurrentTheme={setCurrentTheme}
           />
 
           {!user ? (
@@ -262,10 +259,18 @@ const App: React.FC = () => {
             </Box>
           ) : (
             <Box sx={{ width: '100%' }}>
-              <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                <Tab value="1" icon={<ClockIcon />} iconPosition="start" label="Tracker" />
-                <Tab value="2" icon={<BulbIcon />} iconPosition="start" label="Ideas" />
-              </Tabs>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)}>
+                  <Tab value="1" icon={<ClockIcon />} iconPosition="start" label="Tracker" />
+                  <Tab value="2" icon={<BulbIcon />} iconPosition="start" label="Ideas" />
+                </Tabs>
+                <SettingsMenu
+                  user={user}
+                  handleLogout={handleLogout}
+                  currentTheme={currentTheme}
+                  setCurrentTheme={setCurrentTheme}
+                />
+              </Box>
 
               {activeTab === '1' && (
                 <Box>
@@ -341,8 +346,8 @@ const App: React.FC = () => {
             </Box>
           )}
         </Container>
-      </Box>
-    </ThemeProvider>
+      </Box >
+    </ThemeProvider >
   );
 };
 
