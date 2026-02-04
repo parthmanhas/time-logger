@@ -21,7 +21,8 @@ interface TimelineGraphProps {
 
 const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-        const data = payload[0].payload;
+        const item = payload[0];
+        const data = item.payload[`${item.dataKey}_meta`] || {};
         return (
             <Box sx={{
                 bgcolor: 'background.paper',
@@ -65,8 +66,12 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                 return startA - startB;
             });
 
-        const lanes: { end: number }[] = [];
-        const result = sortedTasks.map(task => {
+        console.log(sortedTasks)
+
+        const dataObj: any = { lane: 'Timeline' };
+        const taskKeys: string[] = [];
+
+        sortedTasks.forEach(task => {
             const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : (task.timestamp as number);
             const endTs = task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt as number);
 
@@ -76,31 +81,23 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
             const startMin = dayjs(startDate).hour() * 60 + dayjs(startDate).minute();
             const endMin = dayjs(endDate).hour() * 60 + dayjs(endDate).minute();
 
-            // Find first lane that doesn't conflict
-            let laneIndex = lanes.findIndex(l => l.end <= startMin);
-            if (laneIndex === -1) {
-                laneIndex = lanes.length;
-                lanes.push({ end: endMin });
-            } else {
-                lanes[laneIndex].end = endMin;
-            }
-
-            return {
+            const key = `${task.name}_${task.id}`;
+            dataObj[key] = [startMin, Math.max(startMin + 1, endMin)];
+            dataObj[`${key}_meta`] = {
                 taskName: task.name,
-                timeRange: [startMin, Math.max(startMin + 1, endMin)], // Ensure at least 1 min width
-                duration: (task.duration || 0),
+                duration: task.duration || 0,
                 startTimeStr: dayjs(startDate).format('HH:mm'),
                 endTimeStr: dayjs(endDate).format('HH:mm'),
-                lane: laneIndex
             };
+            taskKeys.push(key);
         });
 
-        return { data: result, laneCount: lanes.length };
+        return { data: [dataObj], taskKeys };
     }, [tasks]);
 
-    if (tasks.length === 0 || chartData.data.length === 0) return null;
+    if (tasks.length === 0 || chartData.taskKeys.length === 0) return null;
 
-    const chartHeight = Math.max(chartData.laneCount * 35 + 50, 120);
+    const chartHeight = 80;
 
     return (
         <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)' }}>
@@ -117,6 +114,8 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                             layout="vertical"
                             data={chartData.data}
                             margin={{ top: 5, right: 30, left: -20, bottom: 5 }}
+                            barGap="-100%"
+                            barCategoryGap={0}
                         >
                             <XAxis
                                 type="number"
@@ -140,22 +139,17 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                                 isAnimationActive={false}
                                 animationDuration={0}
                             />
-                            <Bar
-                                dataKey="timeRange"
-                                fill={theme.palette.primary.main}
-                                radius={0}
-                                barSize={24}
-                            >
-                                {chartData.data.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={theme.palette.primary.main}
-                                        fillOpacity={0.8}
-                                        stroke={theme.palette.primary.main}
-                                        strokeWidth={1}
-                                    />
-                                ))}
-                            </Bar>
+                            {chartData.taskKeys.map((key) => (
+                                <Bar
+                                    key={key}
+                                    dataKey={key}
+                                    fill={theme.palette.primary.main}
+                                    radius={0}
+                                    stroke={theme.palette.primary.main}
+                                    strokeWidth={1}
+                                    fillOpacity={0.8}
+                                />
+                            ))}
                         </BarChart>
                     </ResponsiveContainer>
                 </Box>
