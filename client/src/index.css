@@ -9,6 +9,7 @@
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --accent-color: #3b82f6;
+  --border-radius: 0px;
 }
 
 [data-theme='midnight'] {
@@ -57,7 +58,7 @@ body {
 .flat-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--border-radius);
 }
 
 .primary-button {
@@ -65,7 +66,7 @@ body {
   border: none !important;
   height: 48px !important;
   padding: 0 24px !important;
-  border-radius: 8px !important;
+  border-radius: var(--border-radius) !important;
   font-weight: 600 !important;
   transition: all 0.2s ease !important;
 }

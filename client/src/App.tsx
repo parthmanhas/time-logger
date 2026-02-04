@@ -109,6 +109,7 @@ const App: React.FC = () => {
   const [projectTaskNames, setProjectTaskNames] = useState<Record<string, string>>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
   const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isRenamingProject, setIsRenamingProject] = useState(false);
@@ -145,7 +146,7 @@ const App: React.FC = () => {
       fontFamily: 'Inter, sans-serif',
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 'var(--border-radius)' as any,
     },
     components: {
       MuiButton: {
@@ -237,13 +238,22 @@ const App: React.FC = () => {
 
   const handleAddProject = async () => {
     if (!user || !newProjectName.trim()) return;
+
+    const wordCount = newProjectName.trim().split(/\s+/).length;
+    if (wordCount > 20) {
+      alert('Project title cannot exceed 20 words');
+      return;
+    }
+
     try {
       const docRef = await addDoc(collection(db, 'projects'), {
         name: newProjectName,
+        description: newProjectDescription,
         createdAt: serverTimestamp(),
       });
       setSelectedProjectId(docRef.id);
       setNewProjectName('');
+      setNewProjectDescription('');
       setIsAddingProject(false);
     } catch (error) {
       console.error('Error adding project:', error);
@@ -260,6 +270,12 @@ const App: React.FC = () => {
 
   const handleRenameProject = async () => {
     if (!newProjectName.trim() || !selectedProjectId) return;
+    const wordCount = newProjectName.trim().split(/\s+/).length;
+    if (wordCount > 20) {
+      alert('Project title cannot exceed 20 words');
+      return;
+    }
+
     try {
       await updateDoc(doc(db, 'projects', selectedProjectId), {
         name: newProjectName,
@@ -504,7 +520,7 @@ const App: React.FC = () => {
               </Stack>
             </Stack>
           ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, borderRadius: 'var(--border-radius)' }}>
               <Box onClick={() => startEditingTime(record, 'timestamp')} sx={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="subtitle2" sx={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: 1 }}>{formatDate(ts, 'HH:mm')}</Typography>
                 <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '11px' }}>{formatDate(ts, 'MMM DD')}</Typography>
@@ -566,11 +582,11 @@ const App: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
             {user ? (
               <Stack direction="row" spacing={1} alignItems="center">
-                <Chip icon={<UserIcon />} label={user.displayName || user.email} variant="outlined" sx={{ borderRadius: '16px', px: 1.5, background: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }} />
+                <Chip icon={<UserIcon />} label={user.displayName || user.email} variant="outlined" sx={{ borderRadius: 'var(--border-radius)', px: 1.5, background: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }} />
                 <Button variant="text" startIcon={<LogoutIcon />} onClick={handleLogout} sx={{ color: 'var(--text-muted)' }}>Logout</Button>
               </Stack>
             ) : (
-              <Button variant="contained" startIcon={<GoogleIcon />} onClick={handleLogin} sx={{ borderRadius: 2 }}>Login with Google</Button>
+              <Button variant="contained" startIcon={<GoogleIcon />} onClick={handleLogin} sx={{ borderRadius: 'var(--border-radius)' }}>Login with Google</Button>
             )}
             <Stack direction="row" spacing={2} alignItems="center">
               <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>THEME</Typography>
@@ -598,7 +614,7 @@ const App: React.FC = () => {
 
               {activeTab === '1' && (
                 <Box>
-                  <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 3 }}>
+                  <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)' }}>
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
                         <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 1 }}>PROJECTS & LOGGING</Typography>
@@ -610,14 +626,29 @@ const App: React.FC = () => {
                         </Stack>
                       </Box>
                       {isAddingProject && (
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                          <TextField fullWidth size="small" placeholder="Project name" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddProject()} />
-                          <Button variant="contained" onClick={handleAddProject}><PlusIcon /></Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Project name (max 20 words)"
+                            value={newProjectName}
+                            onChange={(e) => setNewProjectName(e.target.value)}
+                          />
+                          <TextField
+                            fullWidth
+                            size="small"
+                            multiline
+                            rows={2}
+                            placeholder="Project description"
+                            value={newProjectDescription}
+                            onChange={(e) => setNewProjectDescription(e.target.value)}
+                          />
+                          <Button variant="contained" onClick={handleAddProject} fullWidth startIcon={<PlusIcon />}>Create Project</Button>
                         </Box>
                       )}
                       <Stack spacing={1.5}>
                         {projects?.filter(p => !isFocusMode || p.isFocused).map((p) => (
-                          <Box key={p.id} sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.5, background: 'rgba(0,0,0,0.2)', borderRadius: 2, border: '1px solid var(--border-color)', '&:hover': { borderColor: 'primary.main' } }}>
+                          <Box key={p.id} sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.5, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', '&:hover': { borderColor: 'primary.main' } }}>
                             <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 120 }}>
                               <IconButton size="small" onClick={() => handleToggleProjectFocus(p.id, !!p.isFocused)} sx={{ color: p.isFocused ? 'primary.main' : 'rgba(255,255,255,0.2)', p: 0.5 }}>
                                 {p.isFocused ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
@@ -632,9 +663,12 @@ const App: React.FC = () => {
                                   autoFocus
                                 />
                               ) : (
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <Typography variant="body2" sx={{ fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => setSelectedProjectId(p.id)}>{p.name}</Typography>
-                                  <IconButton size="small" onClick={() => { setSelectedProjectId(p.id); setNewProjectName(p.name); setIsRenamingProject(true); }} sx={{ p: 0.2, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 12 }} /></IconButton>
+                                <Stack spacing={0.2} sx={{ minWidth: 120 }}>
+                                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => setSelectedProjectId(p.id)}>{p.name}</Typography>
+                                    <IconButton size="small" onClick={() => { setSelectedProjectId(p.id); setNewProjectName(p.name); setIsRenamingProject(true); }} sx={{ p: 0.2, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 12 }} /></IconButton>
+                                  </Stack>
+                                  {p.description && <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '10px' }}>{p.description}</Typography>}
                                 </Stack>
                               )}
                             </Stack>
@@ -647,7 +681,7 @@ const App: React.FC = () => {
                               onKeyPress={(e) => e.key === 'Enter' && handleAddTask(p.id)}
                               sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.1)' } }}
                             />
-                            <Button variant="contained" onClick={() => handleAddTask(p.id)}>Log</Button>
+                            <Button variant="contained" onClick={() => handleAddTask(p.id)} sx={{ minWidth: '40px', p: 1 }}><PlusIcon /></Button>
                           </Box>
                         ))}
                       </Stack>
@@ -657,7 +691,7 @@ const App: React.FC = () => {
                   {filteredTasks.length > 0 && (
                     <Card sx={{ mb: 3, bgcolor: 'rgba(37, 99, 235, 0.05)', border: '1px solid rgba(37, 99, 235, 0.1)' }}>
                       <CardContent sx={{ display: 'flex', alignItems: 'center', py: '12px !important' }}>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(37, 99, 235, 0.1)', borderRadius: 2, mr: 2 }}>
+                        <Box sx={{ p: 1, bgcolor: 'rgba(37, 99, 235, 0.1)', borderRadius: 'var(--border-radius)', mr: 2 }}>
                           <HistoryIcon sx={{ color: 'primary.main' }} />
                         </Box>
                         <Box>
@@ -712,7 +746,7 @@ const App: React.FC = () => {
                           sx={{
                             minWidth: 90,
                             p: 1.5,
-                            borderRadius: 2,
+                            borderRadius: 'var(--border-radius)',
                             border: '1px solid',
                             borderColor: dateFilter === day ? 'primary.main' : 'rgba(255,255,255,0.1)',
                             bgcolor: dateFilter === day ? 'rgba(37, 99, 235, 0.1)' : 'background.paper',
@@ -728,7 +762,7 @@ const App: React.FC = () => {
                     </Box>
                   )}
 
-                  <TableContainer component={Paper} sx={{ bgcolor: 'background.paper', borderRadius: 3, overflow: 'hidden' }}>
+                  <TableContainer component={Paper} sx={{ bgcolor: 'background.paper', borderRadius: 'var(--border-radius)', padding: '10px', overflow: 'hidden' }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow>
@@ -763,7 +797,7 @@ const App: React.FC = () => {
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Stored Ideas</Typography>
                   <Stack spacing={1.5}>
                     {ideas?.map(idea => (
-                      <Card key={idea.id} sx={{ bgcolor: 'background.paper', borderRadius: 2 }}>
+                      <Card key={idea.id} sx={{ bgcolor: 'background.paper', borderRadius: 'var(--border-radius)' }}>
                         <CardContent sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box sx={{ flex: 1 }}>
                             <Typography sx={{ fontWeight: 600 }}>{idea.content}</Typography>
