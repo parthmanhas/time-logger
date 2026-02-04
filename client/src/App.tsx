@@ -214,11 +214,17 @@ const App: React.FC = () => {
   };
 
   // Calculations
-  const baseFilteredTasks = useMemo(() => tasks?.filter(task => {
-    const statusMatch = taskFilter === 'all' || (taskFilter === 'pending' && !task.completedAt) || (taskFilter === 'completed' && !!task.completedAt);
-    const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
-    return statusMatch && projectMatch;
-  }) || [], [tasks, taskFilter, projectFilter]);
+  const baseFilteredTasks = useMemo(() => {
+    if (!tasks) return [];
+    const focusedProjectIds = new Set(projects?.filter(p => p.isFocused).map(p => p.id) || []);
+
+    return tasks.filter(task => {
+      const statusMatch = taskFilter === 'all' || (taskFilter === 'pending' && !task.completedAt) || (taskFilter === 'completed' && !!task.completedAt);
+      const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
+      const focusMatch = !isFocusMode || focusedProjectIds.has(task.projectId);
+      return statusMatch && projectMatch && focusMatch;
+    });
+  }, [tasks, taskFilter, projectFilter, isFocusMode, projects]);
 
   const filteredTasks = useMemo(() => baseFilteredTasks.filter(task => {
     const dateMatch = dateFilter === 'all' || formatDate(task.timestamp, 'YYYY-MM-DD') === dateFilter;
