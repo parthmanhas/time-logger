@@ -24,5 +24,4 @@ export interface Idea {
     content: string;
     notes?: string;
     createdAt: FirestoreDate;
-    completedAt?: FirestoreDate;
 }
