@@ -67,8 +67,14 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <TableCell sx={{ width: { xs: 85, sm: 110 }, p: { xs: 0.5, sm: 1.5 } }}>
                 {editingTaskId === record.id && editingField === 'timestamp' ? (
                     <Stack spacing={0.5}>
-                        <Typography variant="caption" sx={{ fontSize: '12px' }}>{formatDate(record.timestamp, 'HH:mm')}</Typography>
-                        <Stack direction="row" spacing={0.5}>
+                        <TextField
+                            type="datetime-local"
+                            size="small"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            sx={{ '& .MuiInputBase-input': { fontSize: '11px', p: '4px' } }}
+                        />
+                        <Stack direction="row" spacing={0.5} justifyContent="center">
                             <IconButton size="small" onClick={() => saveEditedTime(record.id)} sx={{ color: '#10b981', p: 0.2 }}><CheckOutlined sx={{ fontSize: 14 }} /></IconButton>
                             <IconButton size="small" onClick={() => { setEditingTaskId(null); setEditingField(null); }} sx={{ color: '#ef4444', p: 0.2 }}><CloseOutlined sx={{ fontSize: 14 }} /></IconButton>
                         </Stack>
@@ -105,7 +111,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                         {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
                         {record.createdAt && (
                             <Typography variant="caption" sx={{ fontSize: '9px', color: 'var(--text-muted)', ml: 'auto' }}>
-                                Created: {formatDate(record.createdAt, 'HH:mm')}
+                                Created: {formatDate(record.createdAt, 'MMM DD, HH:mm')}
                             </Typography>
                         )}
                     </Stack>
@@ -114,17 +120,33 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <TableCell align="right" sx={{ width: { xs: 60, sm: 180 }, p: { xs: 0.5, sm: 1.5 } }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} alignItems="center" justifyContent="flex-end">
                     {record.completedAt ? (
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0} alignItems="center">
-                            <Button size="small" onClick={() => startEditingTime(record, 'completedAt')} sx={{ color: 'var(--text-muted)', textAlign: 'center', p: 0.3, textTransform: 'none', minWidth: 0 }}>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <Stack direction="row" spacing={0.3} alignItems="center">
-                                        <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
-                                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '10px' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
-                                    </Stack>
-                                </Box>
-                            </Button>
-                            <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)', p: 0.3 }}><UndoOutlined sx={{ fontSize: 14 }} /></IconButton>
-                        </Stack>
+                        editingTaskId === record.id && editingField === 'completedAt' ? (
+                            <Stack spacing={0.5} alignItems="center">
+                                <TextField
+                                    type="datetime-local"
+                                    size="small"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    sx={{ '& .MuiInputBase-input': { fontSize: '10px', p: '2px' }, width: 140 }}
+                                />
+                                <Stack direction="row" spacing={0.5}>
+                                    <IconButton size="small" onClick={() => saveEditedTime(record.id)} sx={{ color: '#10b981', p: 0.2 }}><CheckOutlined sx={{ fontSize: 14 }} /></IconButton>
+                                    <IconButton size="small" onClick={() => { setEditingTaskId(null); setEditingField(null); }} sx={{ color: '#ef4444', p: 0.2 }}><CloseOutlined sx={{ fontSize: 14 }} /></IconButton>
+                                </Stack>
+                            </Stack>
+                        ) : (
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0} alignItems="center">
+                                <Button size="small" onClick={() => startEditingTime(record, 'completedAt')} sx={{ color: 'var(--text-muted)', textAlign: 'center', p: 0.3, textTransform: 'none', minWidth: 0 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <Stack direction="row" spacing={0.3} alignItems="center">
+                                            <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '10px' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
+                                        </Stack>
+                                    </Box>
+                                </Button>
+                                <IconButton size="small" onClick={() => handleUncompleteTask(record.id)} sx={{ color: 'var(--text-muted)', p: 0.3 }}><UndoOutlined sx={{ fontSize: 14 }} /></IconButton>
+                            </Stack>
+                        )
                     ) : (
                         <IconButton size="small" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', p: 0.5 }}><CheckCircleOutlined sx={{ fontSize: 20 }} /></IconButton>
                     )}

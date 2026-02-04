@@ -143,7 +143,7 @@ const App: React.FC = () => {
     setEditingField(field);
     const ts = task[field];
     const date = ts instanceof Timestamp ? ts.toDate() : ts;
-    setEditingValue(dayjs(date || Date.now()).format('HH:mm'));
+    setEditingValue(dayjs(date || Date.now()).format('YYYY-MM-DDTHH:mm'));
     setEditingDateValue(dayjs(date || Date.now()));
   };
 
@@ -163,14 +163,11 @@ const App: React.FC = () => {
   const saveEditedTime = async (id: string) => {
     if (!editingField) return;
     try {
-      const parts = editingValue.split(':').map(Number);
-      if (parts.length < 2 || parts.some(isNaN)) return;
-      const [h, m] = parts;
+      const newTimestamp = dayjs(editingValue).valueOf();
+      if (isNaN(newTimestamp)) return;
       const taskSnap = await getDoc(doc(db, 'tasks', id));
       if (taskSnap.exists()) {
         const task = taskSnap.data() as Task;
-        const baseDate = editingDateValue || dayjs();
-        const newTimestamp = baseDate.hour(h).minute(m).second(0).valueOf();
         const updates: any = { [editingField]: newTimestamp };
         const startTime = editingField === 'timestamp' ? newTimestamp : (task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp);
         const endTime = editingField === 'completedAt' ? newTimestamp : (task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt || null));
