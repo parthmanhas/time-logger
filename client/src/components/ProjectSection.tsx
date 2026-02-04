@@ -8,6 +8,7 @@ import {
     Button,
     TextField,
     IconButton,
+    Tooltip,
 } from '@mui/material';
 import {
     Add as PlusIcon,
@@ -62,6 +63,8 @@ export const ProjectSection: React.FC<ProjectSectionProps> = ({
     setProjectTaskNames,
     handleAddTask,
 }) => {
+    const [expandedProjectId, setExpandedProjectId] = React.useState<string | null>(null);
+
     return (
         <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)' }}>
             <CardContent sx={{ p: 3 }}>
@@ -97,10 +100,24 @@ export const ProjectSection: React.FC<ProjectSectionProps> = ({
                 )}
                 <Stack spacing={1.5}>
                     {projects?.filter(p => !isFocusMode || p.isFocused).map((p) => (
-                        <Box key={p.id} sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.5, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', '&:hover': { borderColor: 'primary.main' } }}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 120 }}>
-                                <IconButton size="small" onClick={() => handleToggleProjectFocus(p.id, !!p.isFocused)} sx={{ color: p.isFocused ? 'primary.main' : 'rgba(255,255,255,0.2)', p: 0.5 }}>
-                                    {p.isFocused ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                        <Box key={p.id} sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', p: { xs: '4px 8px', sm: '6px 12px' }, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', '&:hover': { borderColor: 'primary.main' } }}>
+                            <Box
+                                sx={{
+                                    width: expandedProjectId === p.id ? { xs: 'auto', sm: 140 } : { xs: 80, sm: 140 },
+                                    maxWidth: expandedProjectId === p.id ? { xs: 150, sm: 140 } : { xs: 80, sm: 140 },
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    overflow: 'hidden',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleToggleProjectFocus(p.id, !!p.isFocused)}
+                                    sx={{ color: p.isFocused ? 'primary.main' : 'rgba(255,255,255,0.2)', p: 0.2, mr: 0.5, flexShrink: 0 }}
+                                >
+                                    {p.isFocused ? <PushPin sx={{ fontSize: { xs: 12, sm: 16 } }} /> : <PushPinOutlined sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                                 </IconButton>
                                 {isRenamingProject && selectedProjectId === p.id ? (
                                     <TextField
@@ -110,31 +127,81 @@ export const ProjectSection: React.FC<ProjectSectionProps> = ({
                                         onBlur={handleRenameProject}
                                         onKeyPress={(e) => e.key === 'Enter' && handleRenameProject()}
                                         autoFocus
+                                        sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.3, px: 0.5, fontSize: '12px' } }}
                                     />
                                 ) : (
-                                    <Stack spacing={0.2} sx={{ minWidth: 120 }}>
-                                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => setSelectedProjectId(p.id)}>{p.name}</Typography>
-                                            <IconButton size="small" onClick={() => { setSelectedProjectId(p.id); setNewProjectName(p.name); setIsRenamingProject(true); }} sx={{ p: 0.2, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 12 }} /></IconButton>
-                                        </Stack>
-                                        {p.description && <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '10px' }}>{p.description}</Typography>}
-                                    </Stack>
+                                    <Box
+                                        sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}
+                                        onClick={() => setExpandedProjectId(expandedProjectId === p.id ? null : p.id)}
+                                    >
+                                        <Tooltip title={p.name} disableHoverListener={expandedProjectId === p.id}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    '&:hover': { textDecoration: 'underline' },
+                                                    whiteSpace: expandedProjectId === p.id ? 'normal' : 'nowrap',
+                                                    overflow: expandedProjectId === p.id ? 'visible' : 'hidden',
+                                                    textOverflow: expandedProjectId === p.id ? 'clip' : 'ellipsis',
+                                                    fontSize: { xs: '11px', sm: '13px' },
+                                                    wordBreak: 'break-word',
+                                                    lineHeight: 1.1
+                                                }}
+                                            >
+                                                {p.name}
+                                            </Typography>
+                                        </Tooltip>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedProjectId(p.id); setNewProjectName(p.name); setIsRenamingProject(true); }}
+                                            sx={{ p: 0.1, opacity: 0.3, ml: 0.2, flexShrink: 0 }}
+                                        >
+                                            <EditOutlined sx={{ fontSize: 9 }} />
+                                        </IconButton>
+                                    </Box>
                                 )}
-                            </Stack>
+                            </Box>
                             <TextField
-                                fullWidth
                                 size="small"
                                 placeholder="What are you doing?"
                                 value={projectTaskNames[p.id] || ''}
                                 onChange={(e) => setProjectTaskNames(prev => ({ ...prev, [p.id]: e.target.value }))}
                                 onKeyPress={(e) => e.key === 'Enter' && handleAddTask(p.id)}
-                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.1)' } }}
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    '& .MuiOutlinedInput-root': {
+                                        bgcolor: 'rgba(255,255,255,0.05)',
+                                        height: { xs: 26, sm: 32 },
+                                        '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'primary.main' },
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        py: 0,
+                                        fontSize: { xs: '12px', sm: '13px' },
+                                        px: 1
+                                    }
+                                }}
                             />
-                            <Button variant="contained" onClick={() => handleAddTask(p.id)} sx={{ minWidth: '40px', p: 1 }}><PlusIcon /></Button>
+                            <Button
+                                variant="contained"
+                                onClick={() => handleAddTask(p.id)}
+                                sx={{
+                                    minWidth: { xs: 26, sm: 30 },
+                                    width: { xs: 26, sm: 30 },
+                                    height: { xs: 24, sm: 28 },
+                                    p: 0,
+                                    borderRadius: '4px'
+                                }}
+                            >
+                                <PlusIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                            </Button>
                         </Box>
                     ))}
                 </Stack>
             </CardContent>
-        </Card>
+        </Card >
     );
 };
