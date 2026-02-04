@@ -4,6 +4,7 @@ export type FirestoreDate = Timestamp | number;
 
 export interface Project {
     id: string;
+    userId: string;
     name: string;
     description?: string;
     isFocused?: boolean;
@@ -12,6 +13,7 @@ export interface Project {
 
 export interface Task {
     id: string;
+    userId: string;
     projectId: string;
     name: string;
     timestamp: FirestoreDate;
@@ -22,6 +24,7 @@ export interface Task {
 
 export interface Idea {
     id: string;
+    userId: string;
     content: string;
     notes?: string;
     createdAt: FirestoreDate;

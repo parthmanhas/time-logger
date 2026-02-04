@@ -18,6 +18,7 @@ export const useTrackerActions = () => {
             await addDoc(collection(db, 'tasks'), {
                 name: taskName,
                 projectId: projectId,
+                userId: userId,
                 timestamp: serverTimestamp(),
                 createdAt: serverTimestamp(),
             });
@@ -32,6 +33,7 @@ export const useTrackerActions = () => {
             return await addDoc(collection(db, 'projects'), {
                 name,
                 description,
+                userId,
                 createdAt: serverTimestamp(),
             });
         } catch (error) {
@@ -96,6 +98,7 @@ export const useTrackerActions = () => {
         try {
             await addDoc(collection(db, 'ideas'), {
                 content,
+                userId,
                 createdAt: serverTimestamp(),
             });
         } catch (error) {
