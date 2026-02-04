@@ -276,7 +276,7 @@ const App: React.FC = () => {
                 />
               </Box>
 
-              {loading ? (
+              {loading && (!projects || projects.length === 0) && (!tasks || tasks.length === 0) ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                   <CircularProgress />
                 </Box>
