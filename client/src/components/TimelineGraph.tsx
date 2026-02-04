@@ -24,11 +24,12 @@ const CustomTooltip = ({ active, payload }: any) => {
         const data = payload[0].payload;
         return (
             <Box sx={{
-                bgcolor: 'var(--bg-paper)',
+                bgcolor: 'background.paper',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--border-radius)',
                 p: 1.5,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+                backdropFilter: 'blur(8px)',
                 minWidth: 180,
                 maxWidth: 240
             }}>
