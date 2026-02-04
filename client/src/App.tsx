@@ -245,7 +245,7 @@ const App: React.FC = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', background: 'transparent' }}>
-        <Container maxWidth="md" sx={{ py: 5 }}>
+        <Container maxWidth="md">
           <Header
             user={user}
             handleLogin={handleLogin}

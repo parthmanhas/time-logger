@@ -30,12 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
         <Box sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            mb: 3,
             alignItems: 'center'
         }}>
-            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-1px', color: 'primary.main' }}>
-                TIME-TRACKER
-            </Typography>
             {!user && (
                 <Button variant="contained" startIcon={<GoogleIcon />} onClick={handleLogin} sx={{ borderRadius: 'var(--border-radius)' }}>
                     Login with Google
