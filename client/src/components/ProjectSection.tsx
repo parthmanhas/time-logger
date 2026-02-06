@@ -73,7 +73,13 @@ const ProjectRow = memo(({
             border: '1px solid',
             borderColor: 'var(--border-color)',
             borderLeft: `3px solid ${projectColor}`,
-            '&:hover': { borderColor: projectColor }
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+                borderColor: projectColor,
+                bgcolor: 'rgba(255,255,255,0.03)',
+                boxShadow: `0 0 15px ${projectColor}1A`,
+                transform: 'translateX(2px)'
+            }
         }}>
             <Box
                 sx={{
@@ -148,6 +154,7 @@ const ProjectRow = memo(({
                     '& .MuiOutlinedInput-root': {
                         bgcolor: 'rgba(255,255,255,0.05)',
                         height: { xs: 26, sm: 32 },
+                        cursor: 'text',
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
                         '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: 'primary.main' },
@@ -155,7 +162,9 @@ const ProjectRow = memo(({
                     '& .MuiInputBase-input': {
                         py: 0,
                         fontSize: { xs: '12px', sm: '13px' },
-                        px: 1
+                        px: 1,
+                        cursor: 'text',
+                        caretColor: 'primary.main'
                     }
                 }}
             />
@@ -256,6 +265,7 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             placeholder="Project name (max 20 words)"
                             value={newProjectName}
                             onChange={(e) => setNewProjectName(e.target.value)}
+                            sx={{ '& .MuiInputBase-input': { cursor: 'text', caretColor: 'primary.main' } }}
                         />
                         <TextField
                             fullWidth
@@ -265,8 +275,17 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             placeholder="Project description"
                             value={newProjectDescription}
                             onChange={(e) => setNewProjectDescription(e.target.value)}
+                            sx={{ '& .MuiInputBase-input': { cursor: 'text', caretColor: 'primary.main' } }}
                         />
-                        <Button variant="contained" onClick={handleAddProject} fullWidth startIcon={<PlusIcon />}>Create Project</Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleAddProject}
+                            fullWidth
+                            startIcon={<PlusIcon />}
+                            sx={{ mt: 1, transition: 'all 0.2s', '&:hover': { transform: 'translateY(-1px)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' } }}
+                        >
+                            Create Project
+                        </Button>
                     </Box>
                 )}
                 <Stack spacing={1.5}>
