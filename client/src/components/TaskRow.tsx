@@ -115,20 +115,20 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     ) : (
                         <Typography
                             variant="body1"
-                            onClick={() => !record.completedAt && startEditingTaskName(record)}
+                            onClick={() => startEditingTaskName(record)}
                             sx={{
                                 color: record.completedAt ? 'var(--text-muted)' : 'var(--text-main)',
                                 fontSize: { xs: '13px', sm: '15px' },
                                 fontWeight: 500,
                                 textDecoration: record.completedAt ? 'line-through' : 'none',
-                                cursor: record.completedAt ? 'default' : 'pointer',
-                                '&:hover': { color: record.completedAt ? 'var(--text-muted)' : 'primary.main' },
+                                cursor: 'pointer',
+                                '&:hover': { color: 'primary.main' },
                                 wordBreak: 'break-word',
                                 lineHeight: 1.2
                             }}
                         >
                             {record.name}
-                            {!record.completedAt && <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />}
+                            <EditOutlined sx={{ fontSize: '10px', opacity: 0.3, ml: 1 }} />
                         </Typography>
                     )}
                     <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
