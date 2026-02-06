@@ -20,7 +20,7 @@ import {
     AccessTime as ClockIcon,
 } from '@mui/icons-material';
 import type { Task, Project } from '../types';
-import { formatDate, formatDuration } from '../utils/dateUtils';
+import { formatDate, formatDuration, getTimeAgo } from '../utils/dateUtils';
 import { Timestamp } from 'firebase/firestore';
 import { getDeterministicColor } from '../constants/colors';
 
@@ -147,6 +147,19 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             />
                         )}
                         {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
+                        {record.createdAt && (
+                            <Chip
+                                size="small"
+                                label={getTimeAgo(record.createdAt)}
+                                sx={{
+                                    fontSize: '9px',
+                                    height: 18,
+                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                    color: 'var(--text-muted)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            />
+                        )}
                         {record.createdAt && (
                             <Typography variant="caption" sx={{ fontSize: '9px', color: 'var(--text-muted)', ml: 'auto' }}>
                                 Created: {formatDate(record.createdAt, 'MMM DD, HH:mm')}

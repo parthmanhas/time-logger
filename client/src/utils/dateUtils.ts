@@ -1,5 +1,14 @@
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { Timestamp } from 'firebase/firestore';
+
+dayjs.extend(relativeTime);
+
+export const getTimeAgo = (ts: Timestamp | number | undefined) => {
+    if (!ts) return '';
+    const date = ts instanceof Timestamp ? ts.toDate() : ts;
+    return dayjs(date).fromNow();
+};
 
 export const formatDate = (ts: Timestamp | number | undefined, format: string) => {
     if (!ts) return 'Pending...';
