@@ -62,7 +62,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('1');
 
   // Filters
-  const [taskFilter, setTaskFilter] = useState<string>(() => localStorage.getItem('taskHistoryFilter') || 'all');
+  const [taskFilter, setTaskFilter] = useState<string>('pending');
   const [projectFilter, setProjectFilter] = useState<string>(() => localStorage.getItem('projectHistoryFilter') || 'all');
   const [dateFilter, setDateFilter] = useState<string>('all');
 
