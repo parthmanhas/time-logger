@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Typography,
@@ -63,6 +63,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     setEditingField,
     setEditingValue,
 }) => {
+    const [isDeleting, setIsDeleting] = useState(false);
     const projectColor = project?.color || (project?.id ? getDeterministicColor(project.id) : '#3b82f6');
     const ts = record.timestamp instanceof Timestamp ? record.timestamp.toMillis() : record.timestamp;
 
@@ -222,7 +223,15 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     ) : (
                         <IconButton size="small" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', p: 0.5 }}><CheckCircleOutlined sx={{ fontSize: 20 }} /></IconButton>
                     )}
-                    <IconButton size="small" onClick={() => handleDeleteTask(record.id)} sx={{ color: 'error.main', opacity: 0.5, '&:hover': { opacity: 1 }, p: 0.5 }}><DeleteOutlined sx={{ fontSize: 18 }} /></IconButton>
+                    {isDeleting ? (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600, fontSize: '10px' }}>Confirm?</Typography>
+                            <IconButton size="small" onClick={() => handleDeleteTask(record.id)} sx={{ color: 'error.main', p: 0.5 }}><CheckOutlined sx={{ fontSize: 16 }} /></IconButton>
+                            <IconButton size="small" onClick={() => setIsDeleting(false)} sx={{ color: 'var(--text-muted)', p: 0.5 }}><CloseOutlined sx={{ fontSize: 16 }} /></IconButton>
+                        </Stack>
+                    ) : (
+                        <IconButton size="small" onClick={() => setIsDeleting(true)} sx={{ color: 'error.main', opacity: 0.5, '&:hover': { opacity: 1 }, p: 0.5 }}><DeleteOutlined sx={{ fontSize: 18 }} /></IconButton>
+                    )}
                 </Stack>
             </TableCell>
         </TableRow>
