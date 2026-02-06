@@ -30,7 +30,7 @@ interface ProjectRowProps {
     newProjectName: string;
     setNewProjectName: (val: string) => void;
     handleRenameProject: () => void;
-    handleAddTask: (projectId: string, taskName: string) => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
     setIsRenamingProject: (val: boolean) => void;
 }
 
@@ -48,11 +48,16 @@ const ProjectRow = memo(({
 }: ProjectRowProps) => {
     const [taskName, setTaskName] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
+    const [complexity, setComplexity] = useState<'simple' | 'complex'>('simple');
 
     const onAddTask = () => {
         if (!taskName.trim()) return;
-        handleAddTask(project.id, taskName);
+        handleAddTask(project.id, taskName, complexity);
         setTaskName('');
+    };
+
+    const toggleComplexity = () => {
+        setComplexity(prev => prev === 'simple' ? 'complex' : 'simple');
     };
 
     const projectColor = project.color || getDeterministicColor(project.id);
@@ -154,6 +159,25 @@ const ProjectRow = memo(({
                     }
                 }}
             />
+            <Button
+                variant="outlined"
+                size="small"
+                onClick={toggleComplexity}
+                sx={{
+                    minWidth: { xs: 50, sm: 70 },
+                    height: { xs: 24, sm: 28 },
+                    fontSize: { xs: '9px', sm: '11px' },
+                    p: 0,
+                    borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(46, 204, 113, 0.2)',
+                    color: complexity === 'complex' ? '#d97706' : '#2ecc71',
+                    '&:hover': {
+                        borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.5)' : 'rgba(46, 204, 113, 0.4)',
+                        bgcolor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.05)' : 'rgba(46, 204, 113, 0.05)'
+                    }
+                }}
+            >
+                {complexity}
+            </Button>
             <IconButton
                 onClick={onAddTask}
                 sx={{
@@ -189,7 +213,7 @@ interface ProjectSectionProps {
     selectedProjectId: string | undefined;
     setSelectedProjectId: (val: string | undefined) => void;
     handleRenameProject: () => void;
-    handleAddTask: (projectId: string, taskName: string) => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
 }
 
 export const ProjectSection: React.FC<ProjectSectionProps> = memo(({

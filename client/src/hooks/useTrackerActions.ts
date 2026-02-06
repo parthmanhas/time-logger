@@ -13,13 +13,14 @@ import type { Task } from '../types';
 import { getRandomProjectColor } from '../constants/colors';
 
 export const useTrackerActions = () => {
-    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined) => {
+    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined, complexity?: 'simple' | 'complex') => {
         if (!userId || !taskName.trim()) return;
         try {
             await addDoc(collection(db, 'tasks'), {
                 name: taskName,
                 projectId: projectId,
                 userId: userId,
+                complexity: complexity || 'simple',
                 timestamp: serverTimestamp(),
                 createdAt: serverTimestamp(),
             });

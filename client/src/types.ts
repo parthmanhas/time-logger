@@ -20,6 +20,7 @@ export interface Task {
     timestamp: FirestoreDate;
     completedAt?: FirestoreDate;
     duration?: number;
+    complexity?: 'simple' | 'complex';
     createdAt: FirestoreDate;
 }
 

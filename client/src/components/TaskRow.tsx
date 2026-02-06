@@ -168,6 +168,21 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                                 }}
                             />
                         )}
+                        {record.complexity && (
+                            <Chip
+                                size="small"
+                                label={record.complexity}
+                                sx={{
+                                    fontSize: '10px',
+                                    height: 20,
+                                    bgcolor: record.complexity === 'complex' ? 'rgba(217, 119, 6, 0.08)' : 'rgba(46, 204, 113, 0.08)',
+                                    color: record.complexity === 'complex' ? '#d97706' : '#2ecc71',
+                                    border: `1px solid ${record.complexity === 'complex' ? 'rgba(217, 119, 6, 0.2)' : 'rgba(46, 204, 113, 0.2)'}`,
+                                    textTransform: 'capitalize',
+                                    fontWeight: 600
+                                }}
+                            />
+                        )}
                         {record.duration && <Chip size="small" label={formatDuration(record.duration)} sx={{ fontSize: '10px', height: 20, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }} />}
                         {record.createdAt && (
                             <Chip
