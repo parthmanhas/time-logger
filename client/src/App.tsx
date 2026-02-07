@@ -230,6 +230,18 @@ const App: React.FC = () => {
     const dateMatch = dateFilter === 'all' || formatDate(task.timestamp, 'YYYY-MM-DD') === dateFilter;
     return dateMatch;
   }).sort((a, b) => {
+    // 1. Active task always at the top
+    if (a.isTracking) return -1;
+    if (b.isTracking) return 1;
+
+    // 2. Pending tasks: Oldest first (based on createdAt)
+    if (!a.completedAt && !b.completedAt) {
+      const tA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : (a.createdAt as number || 0);
+      const tB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : (b.createdAt as number || 0);
+      return tA - tB;
+    }
+
+    // 3. Completed tasks: Newest first (based on timestamp/startTime)
     const tA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : (a.timestamp as number || 0);
     const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
     return tB - tA;
