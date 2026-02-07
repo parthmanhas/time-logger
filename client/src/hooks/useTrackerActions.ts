@@ -77,7 +77,8 @@ export const useTrackerActions = () => {
                 const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp;
                 await updateDoc(doc(db, 'tasks', id), {
                     completedAt: now,
-                    duration: now - (startTs as number)
+                    duration: now - (startTs as number),
+                    isTracking: false
                 });
             }
         } catch (error) {
@@ -85,11 +86,28 @@ export const useTrackerActions = () => {
         }
     };
 
+    const handleSetTaskActive = async (id: string, active: boolean, userId: string | undefined, tasks: Task[]) => {
+        if (!userId) return;
+        try {
+            // Deactivate all other tasks first to ensure only one is active
+            if (active) {
+                const activeTasks = tasks.filter(t => t.isTracking && t.id !== id);
+                for (const t of activeTasks) {
+                    await updateDoc(doc(db, 'tasks', t.id), { isTracking: false });
+                }
+            }
+            await updateDoc(doc(db, 'tasks', id), { isTracking: active });
+        } catch (error) {
+            console.error('Error setting task active:', error);
+        }
+    };
+
     const handleUncompleteTask = async (id: string) => {
         try {
             await updateDoc(doc(db, 'tasks', id), {
                 completedAt: null,
-                duration: null
+                duration: null,
+                isTracking: false
             });
         } catch (error) {
             console.error('Error uncompleting task:', error);
@@ -133,6 +151,7 @@ export const useTrackerActions = () => {
         handleDeleteTask,
         handleCompleteTask,
         handleUncompleteTask,
+        handleSetTaskActive,
         handleAddIdea,
         handleUpdateIdeaNotes,
         handleDeleteIdea,

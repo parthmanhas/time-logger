@@ -22,6 +22,7 @@ export interface Task {
     duration?: number;
     complexity?: 'simple' | 'complex';
     createdAt: FirestoreDate;
+    isTracking?: boolean;
 }
 
 export interface Idea {

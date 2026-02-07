@@ -47,6 +47,7 @@ interface HistorySectionProps {
     handleCompleteTask: (id: string) => void;
     handleUncompleteTask: (id: string) => void;
     handleDeleteTask: (id: string) => void;
+    handleSetTaskActive: (id: string, active: boolean) => void;
     setEditingTaskId: (id: string | null) => void;
     setEditingField: (field: 'timestamp' | 'completedAt' | 'name' | null) => void;
     setEditingValue: (val: string) => void;
