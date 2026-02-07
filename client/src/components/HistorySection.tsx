@@ -116,26 +116,73 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
 
             {sortedDays.length > 0 && (
                 <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 2, mb: 2, '&::-webkit-scrollbar': { display: 'none' } }}>
-                    {sortedDays.map(day => (
-                        <Box
-                            key={day}
-                            onClick={() => setDateFilter(dateFilter === day ? 'all' : day)}
-                            sx={{
-                                minWidth: 90,
-                                p: 1.5,
-                                borderRadius: 'var(--border-radius)',
-                                border: '1px solid',
-                                borderColor: dateFilter === day ? 'primary.main' : 'rgba(255,255,255,0.1)',
-                                bgcolor: dateFilter === day ? 'rgba(37, 99, 235, 0.1)' : 'background.paper',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>{dayjs(day).format('ddd')}</Typography>
-                            <Typography sx={{ fontWeight: 700 }}>{formatTotalDuration(dailyTotals[day])}</Typography>
-                        </Box>
-                    ))}
+                    {sortedDays.map(day => {
+                        const isToday = day === dayjs().format('YYYY-MM-DD');
+                        const isSelected = dateFilter === day;
+
+                        return (
+                            <Box
+                                key={day}
+                                onClick={() => setDateFilter(isSelected ? 'all' : day)}
+                                sx={{
+                                    minWidth: 100,
+                                    p: 1.5,
+                                    borderRadius: 'var(--border-radius)',
+                                    border: '1px solid',
+                                    borderColor: isSelected
+                                        ? 'primary.main'
+                                        : isToday
+                                            ? 'rgba(16, 185, 129, 0.5)'  // Success/Green tint for Today
+                                            : 'rgba(255,255,255,0.1)',
+                                    bgcolor: isSelected
+                                        ? 'rgba(37, 99, 235, 0.1)'
+                                        : isToday
+                                            ? 'rgba(16, 185, 129, 0.05)'
+                                            : 'background.paper',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    transition: 'all 0.2s',
+                                    flexShrink: 0,
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {isToday && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bgcolor: 'rgba(16, 185, 129, 0.2)',
+                                            color: '#10b981',
+                                            fontSize: '8px',
+                                            fontWeight: 900,
+                                            letterSpacing: '1px',
+                                            py: 0.2
+                                        }}
+                                    >
+                                        TODAY
+                                    </Typography>
+                                )}
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: isToday ? '#10b981' : 'var(--text-muted)',
+                                        display: 'block',
+                                        mt: isToday ? 1.2 : 0,
+                                        fontWeight: isToday ? 700 : 400
+                                    }}
+                                >
+                                    {dayjs(day).format('ddd, MMM DD')}
+                                </Typography>
+                                <Typography sx={{ fontWeight: 700, fontSize: '13px', color: isToday ? 'var(--text-main)' : 'inherit' }}>
+                                    {formatTotalDuration(dailyTotals[day])}
+                                </Typography>
+                            </Box>
+                        );
+                    })}
                 </Box>
             )}
 

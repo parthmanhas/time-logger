@@ -65,9 +65,9 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
             });
 
         const dataObj: any = { lane: 'Timeline' };
-        const taskKeys: string[] = [];
+        const taskKeys: { key: string; fill: string }[] = [];
 
-        sortedTasks.forEach(task => {
+        sortedTasks.forEach((task, index) => {
             const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : (task.timestamp as number);
             const endTs = task.completedAt instanceof Timestamp ? task.completedAt.toMillis() : (task.completedAt as number);
 
@@ -77,19 +77,46 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
             const startMin = dayjs(startDate).hour() * 60 + dayjs(startDate).minute();
             const endMin = dayjs(endDate).hour() * 60 + dayjs(endDate).minute();
 
-            const key = `${task.name}_${task.id}`;
-            dataObj[key] = [startMin, Math.max(startMin + 1, endMin)];
-            dataObj[`${key}_meta`] = {
+            const fill = index % 2 === 0 ? theme.palette.primary.main : theme.palette.primary.dark;
+            const meta = {
                 taskName: task.name,
                 duration: task.duration || 0,
                 startTimeStr: dayjs(startDate).format('HH:mm'),
                 endTimeStr: dayjs(endDate).format('HH:mm'),
             };
-            taskKeys.push(key);
+
+            // Calculate duration in minutes and check if it crosses midnight
+            const durationMins = dayjs(endDate).diff(dayjs(startDate), 'minute');
+            const isDifferentDay = !dayjs(startDate).isSame(dayjs(endDate), 'day');
+
+            if (durationMins >= 1440) {
+                // Task is 24h or longer - fill the entire day
+                const key = `${task.name}_${task.id}_full`;
+                dataObj[key] = [0, 1440];
+                dataObj[`${key}_meta`] = meta;
+                taskKeys.push({ key, fill });
+            } else if (isDifferentDay) {
+                // Task crosses midnight (but shorter than 24h)
+                const key1 = `${task.name}_${task.id}_1`;
+                dataObj[key1] = [startMin, 1440];
+                dataObj[`${key1}_meta`] = meta;
+                taskKeys.push({ key: key1, fill });
+
+                const key2 = `${task.name}_${task.id}_2`;
+                dataObj[key2] = [0, endMin];
+                dataObj[`${key2}_meta`] = meta;
+                taskKeys.push({ key: key2, fill });
+            } else {
+                // Normal same-day task
+                const key = `${task.name}_${task.id}`;
+                dataObj[key] = [startMin, Math.max(startMin + 1, endMin)];
+                dataObj[`${key}_meta`] = meta;
+                taskKeys.push({ key, fill });
+            }
         });
 
         return { data: [dataObj], taskKeys };
-    }, [tasks]);
+    }, [tasks, theme]);
 
     if (tasks.length === 0 || chartData.taskKeys.length === 0) return null;
 
@@ -136,13 +163,13 @@ export const TimelineGraph: React.FC<TimelineGraphProps> = ({ tasks }) => {
                                 animationDuration={0}
                                 allowEscapeViewBox={{ x: true, y: true }}
                             />
-                            {chartData.taskKeys.map((key, index) => (
+                            {chartData.taskKeys.map((item) => (
                                 <Bar
-                                    key={key}
-                                    dataKey={key}
-                                    fill={index % 2 === 0 ? theme.palette.primary.main : theme.palette.primary.dark}
+                                    key={item.key}
+                                    dataKey={item.key}
+                                    fill={item.fill}
                                     radius={0}
-                                    stroke={index % 2 === 0 ? theme.palette.primary.main : theme.palette.primary.dark}
+                                    stroke={item.fill}
                                     strokeWidth={1}
                                     fillOpacity={0.8}
                                 />

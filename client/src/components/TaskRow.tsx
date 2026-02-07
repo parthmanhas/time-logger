@@ -92,18 +92,18 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                         <Box
-                            onClick={() => !record.completedAt && startEditingTime(record, 'timestamp')}
-                            sx={{ cursor: record.completedAt ? 'default' : 'pointer', display: 'flex', flexDirection: 'column' }}
+                            onClick={() => startEditingTime(record, 'timestamp')}
+                            sx={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                         >
                             <Typography variant="subtitle2" sx={{ color: 'var(--text-main)', fontSize: { xs: '12px', sm: '14px' }, lineHeight: 1 }}>{formatDate(ts, 'HH:mm')}</Typography>
                             <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '10px' }}>{formatDate(ts, 'MMM DD')}</Typography>
                         </Box>
-                        {!record.completedAt && (
-                            <Stack direction="row" spacing={0.5}>
-                                <IconButton size="small" onClick={() => startEditingTime(record, 'timestamp')} sx={{ p: 0.3, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 10 }} /></IconButton>
+                        <Stack direction="row" spacing={0.5}>
+                            <IconButton size="small" onClick={() => startEditingTime(record, 'timestamp')} sx={{ p: 0.3, opacity: 0.3 }}><EditOutlined sx={{ fontSize: 10 }} /></IconButton>
+                            {!record.completedAt && (
                                 <IconButton size="small" onClick={() => updateToNow(record.id, 'timestamp')} sx={{ color: 'var(--text-muted)', p: 0.3 }}><ClockIcon sx={{ fontSize: 12 }} /></IconButton>
-                            </Stack>
-                        )}
+                            )}
+                        </Stack>
                     </Box>
                 )}
             </TableCell>
@@ -228,7 +228,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                         <Stack direction="row" spacing={0.3} alignItems="center">
                                             <CheckCircleOutlined sx={{ fontSize: 13, color: '#10b981' }} />
-                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '10px' }}>{formatDate(record.completedAt, 'HH:mm')}</Typography>
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '10px' }}>{formatDate(record.completedAt, 'MMM DD, HH:mm')}</Typography>
                                         </Stack>
                                     </Box>
                                 </Button>
