@@ -220,7 +220,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                         {record.createdAt && (
                             <Chip
                                 size="small"
-                                label={getTimeAgo(record.createdAt)}
+                                label={record.completedAt ? formatDate(record.createdAt, 'MMM DD HH:mm') : getTimeAgo(record.createdAt)}
                                 sx={{
                                     fontSize: '9px',
                                     height: 18,
