@@ -45,6 +45,7 @@ interface HistorySectionProps {
     saveEditedTaskName: (id: string) => void;
     updateToNow: (id: string, field: 'timestamp' | 'completedAt') => void;
     handleCompleteTask: (id: string) => void;
+    handleCompleteAndDuplicateTask: (id: string) => void;
     handleUncompleteTask: (id: string) => void;
     handleDeleteTask: (id: string) => void;
     handleSetTaskActive: (id: string, active: boolean) => void;

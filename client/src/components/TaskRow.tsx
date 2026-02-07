@@ -22,6 +22,7 @@ import {
     AccessTime as ClockIcon,
     PlayArrow as PlayIcon,
     Pause as PauseIcon,
+    FreeBreakfast as BreakIcon,
 } from '@mui/icons-material';
 import type { Task, Project } from '../types';
 import { formatDate, formatDuration, getTimeAgo } from '../utils/dateUtils';
@@ -40,6 +41,7 @@ interface TaskRowProps {
     saveEditedTaskName: (id: string) => void;
     updateToNow: (id: string, field: 'timestamp' | 'completedAt') => void;
     handleCompleteTask: (id: string) => void;
+    handleCompleteAndDuplicateTask: (id: string) => void;
     handleUncompleteTask: (id: string) => void;
     handleDeleteTask: (id: string) => void;
     handleSetTaskActive: (id: string, active: boolean) => void;
@@ -60,6 +62,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     saveEditedTaskName,
     updateToNow,
     handleCompleteTask,
+    handleCompleteAndDuplicateTask,
     handleUncompleteTask,
     handleDeleteTask,
     handleSetTaskActive,
@@ -277,7 +280,35 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             </Stack>
                         )
                     ) : (
-                        <IconButton size="small" onClick={() => handleCompleteTask(record.id)} sx={{ color: 'primary.main', p: 0.5 }}><CheckCircleOutlined sx={{ fontSize: 20 }} /></IconButton>
+                        <Stack direction="row" spacing={0.5}>
+                            <Tooltip title="Complete & Duplicate (Take Break)">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleCompleteAndDuplicateTask(record.id)}
+                                    sx={{
+                                        color: '#d97706',
+                                        bgcolor: 'rgba(217, 119, 6, 0.05)',
+                                        '&:hover': { bgcolor: 'rgba(217, 119, 6, 0.15)' },
+                                        p: 0.5
+                                    }}
+                                >
+                                    <BreakIcon sx={{ fontSize: 20 }} />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Complete Task">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleCompleteTask(record.id)}
+                                    sx={{
+                                        color: 'primary.main',
+                                        p: 0.5,
+                                        '&:hover': { bgcolor: 'rgba(37, 99, 235, 0.1)' }
+                                    }}
+                                >
+                                    <CheckCircleOutlined sx={{ fontSize: 20 }} />
+                                </IconButton>
+                            </Tooltip>
+                        </Stack>
                     )}
                     {!isTracking && (
                         isDeleting ? (

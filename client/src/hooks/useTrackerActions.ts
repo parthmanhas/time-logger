@@ -165,6 +165,45 @@ export const useTrackerActions = () => {
         }
     };
 
+    const handleCompleteAndDuplicateTask = async (id: string, userId: string | undefined) => {
+        if (!userId) return;
+        try {
+            const now = Date.now();
+            const taskSnap = await getDoc(doc(db, 'tasks', id));
+            if (taskSnap.exists()) {
+                const task = taskSnap.data() as Task;
+                const startTs = task.timestamp instanceof Timestamp ? task.timestamp.toMillis() : task.timestamp;
+
+                // 1. Complete current task
+                await updateDoc(doc(db, 'tasks', id), {
+                    completedAt: now,
+                    duration: now - (startTs as number),
+                    isTracking: false
+                });
+
+                // 2. Create duplicate task (same name, project, complexity)
+                await addDoc(collection(db, 'tasks'), {
+                    name: task.name,
+                    projectId: task.projectId,
+                    userId: userId,
+                    complexity: task.complexity || 'simple',
+                    timestamp: serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                    isTracking: false
+                });
+
+                // 3. Log break in Ideas
+                await addDoc(collection(db, 'ideas'), {
+                    content: `Break taken: ${task.name} at ${dayjs(now).format('HH:mm')}. Task duplicated for later.`,
+                    userId: userId,
+                    createdAt: serverTimestamp(),
+                });
+            }
+        } catch (error) {
+            console.error('Error completing and duplicating task:', error);
+        }
+    };
+
     return {
         handleAddTask,
         handleAddProject,
@@ -174,6 +213,7 @@ export const useTrackerActions = () => {
         handleCompleteTask,
         handleUncompleteTask,
         handleSetTaskActive,
+        handleCompleteAndDuplicateTask,
         handleAddIdea,
         handleUpdateIdeaNotes,
         handleDeleteIdea,

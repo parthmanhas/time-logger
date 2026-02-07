@@ -355,6 +355,7 @@ const App: React.FC = () => {
                         saveEditedTaskName={saveEditedTaskName}
                         updateToNow={updateToNow}
                         handleCompleteTask={actions.handleCompleteTask}
+                        handleCompleteAndDuplicateTask={(id: string) => actions.handleCompleteAndDuplicateTask(id, user?.uid)}
                         handleUncompleteTask={actions.handleUncompleteTask}
                         handleDeleteTask={actions.handleDeleteTask}
                         handleSetTaskActive={(id: string, active: boolean) => actions.handleSetTaskActive(id, active, user?.uid, tasks || [])}
