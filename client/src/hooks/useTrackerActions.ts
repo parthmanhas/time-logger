@@ -9,6 +9,7 @@ import {
     Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import dayjs from 'dayjs';
 import type { Task } from '../types';
 import { getRandomProjectColor } from '../constants/colors';
 
@@ -95,8 +96,29 @@ export const useTrackerActions = () => {
                 for (const t of activeTasks) {
                     await updateDoc(doc(db, 'tasks', t.id), { isTracking: false });
                 }
+
+                // Auto note down focus start
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    const now = Date.now();
+                    const timeStr = dayjs(now).format('HH:mm');
+
+                    // Update task timestamp to current time for accurate duration calculation
+                    await updateDoc(doc(db, 'tasks', id), {
+                        isTracking: true,
+                        timestamp: now
+                    });
+
+                    // Add a note in Ideas section
+                    await addDoc(collection(db, 'ideas'), {
+                        content: `Focus started: ${task.name} at ${timeStr}`,
+                        userId: userId,
+                        createdAt: serverTimestamp(),
+                    });
+                }
+            } else {
+                await updateDoc(doc(db, 'tasks', id), { isTracking: false });
             }
-            await updateDoc(doc(db, 'tasks', id), { isTracking: active });
         } catch (error) {
             console.error('Error setting task active:', error);
         }

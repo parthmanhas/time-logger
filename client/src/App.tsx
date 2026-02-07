@@ -137,6 +137,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleFocusMode = () => {
+    const nextValue = !isFocusMode;
+    setIsFocusMode(nextValue);
+    if (nextValue && user) {
+      actions.handleAddIdea(`Focus session started at ${dayjs().format('HH:mm')}`, user.uid);
+    }
+  };
+
   // Editing logic
   const startEditingTime = (task: Task, field: 'timestamp' | 'completedAt' = 'timestamp') => {
     setEditingTaskId(task.id);
@@ -305,7 +313,7 @@ const App: React.FC = () => {
                       <ProjectSection
                         projects={projects}
                         isFocusMode={isFocusMode}
-                        setIsFocusMode={setIsFocusMode}
+                        setIsFocusMode={handleToggleFocusMode}
                         isAddingProject={isAddingProject}
                         setIsAddingProject={setIsAddingProject}
                         newProjectName={newProjectName}
