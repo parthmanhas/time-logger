@@ -407,7 +407,7 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                     ))
                 ) : (
                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.1)', fontStyle: 'italic', pl: 1 }}>
-                        No projects in this category
+                        {isFocusMode ? "No pinned projects in this category" : "No projects in this category"}
                     </Typography>
                 )}
             </Stack>
@@ -420,7 +420,7 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
                     <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 1 }}>PROJECTS & LOGGING</Typography>
                     <Stack direction="row" spacing={1}>
-                        {projects?.some(p => p.isFocused) && (
+                        {(isFocusMode || projects?.some(p => p.isFocused)) && (
                             <Button size="small" startIcon={isFocusMode ? <Visibility /> : <VisibilityOff />} onClick={() => setIsFocusMode(!isFocusMode)} sx={{ color: isFocusMode ? 'primary.main' : 'var(--text-muted)', fontSize: '12px' }}>{isFocusMode ? 'Show All' : 'Focus'}</Button>
                         )}
                         <Button

@@ -48,7 +48,7 @@ const App: React.FC = () => {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState<boolean>(() => localStorage.getItem('isFocusMode') === 'true');
   const [editingProjectName, setEditingProjectName] = useState('');
   const [editingProjectType, setEditingProjectType] = useState<'everyday' | 'finishing'>('everyday');
   const [isRenamingProject, setIsRenamingProject] = useState(false);
@@ -92,8 +92,9 @@ const App: React.FC = () => {
     localStorage.setItem('taskHistoryFilter', taskFilter);
     localStorage.setItem('projectHistoryFilter', projectFilter);
     localStorage.setItem('isRecentSorted', String(isRecentSorted));
+    localStorage.setItem('isFocusMode', String(isFocusMode));
     document.body.setAttribute('data-theme', currentTheme);
-  }, [taskFilter, projectFilter, currentTheme, isRecentSorted]);
+  }, [taskFilter, projectFilter, currentTheme, isRecentSorted, isFocusMode]);
 
   // Auth
   const handleLogin = async () => {
@@ -261,6 +262,13 @@ const App: React.FC = () => {
     return tB - tA;
   }), [baseFilteredTasks, dateFilter]);
   const activeTask = useMemo(() => tasks?.find(t => t.isTracking), [tasks]);
+
+  // Auto-exit Focus Mode if no projects are focused
+  useEffect(() => {
+    if (isFocusMode && projects && projects.length > 0 && !projects.some(p => p.isFocused)) {
+      setIsFocusMode(false);
+    }
+  }, [projects, isFocusMode]);
 
   const graphTasks = useMemo(() => {
     if (dateFilter !== 'all') return filteredTasks;
