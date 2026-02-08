@@ -21,7 +21,9 @@ import {
     EditOutlined,
     Check,
     Close,
+    Sort,
 } from '@mui/icons-material';
+import { Timestamp } from 'firebase/firestore';
 import type { Project } from '../types';
 import { getDeterministicColor } from '../constants/colors';
 import { getTimeAgo } from '../utils/dateUtils';
@@ -326,6 +328,8 @@ interface ProjectSectionProps {
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
     projectLastWorkedOn: Map<string, number>;
     projectPendingCounts: Map<string, number>;
+    isRecentSorted: boolean;
+    setIsRecentSorted: (val: boolean) => void;
 }
 
 export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
@@ -354,9 +358,26 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     handleAddTask,
     projectLastWorkedOn,
     projectPendingCounts,
+    isRecentSorted,
+    setIsRecentSorted,
 }) => {
-    const everydayProjects = projects?.filter(p => (!isFocusMode || p.isFocused) && (!p.projectType || p.projectType === 'everyday')) || [];
-    const finishingProjects = projects?.filter(p => (!isFocusMode || p.isFocused) && p.projectType === 'finishing') || [];
+    const sortProjects = (list: Project[]) => {
+        if (!isRecentSorted) {
+            return [...list].sort((a, b) => {
+                const timeA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : (a.createdAt as number || 0);
+                const timeB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : (b.createdAt as number || 0);
+                return timeA - timeB;
+            });
+        }
+        return [...list].sort((a, b) => {
+            const timeA = projectLastWorkedOn.get(a.id) || 0;
+            const timeB = projectLastWorkedOn.get(b.id) || 0;
+            return timeB - timeA;
+        });
+    };
+
+    const everydayProjects = sortProjects(projects?.filter(p => (!isFocusMode || p.isFocused) && (!p.projectType || p.projectType === 'everyday')) || []);
+    const finishingProjects = sortProjects(projects?.filter(p => (!isFocusMode || p.isFocused) && p.projectType === 'finishing') || []);
 
     const renderProjectList = (title: string, list: Project[]) => (
         <Box sx={{ mb: 3 }}>
@@ -402,6 +423,14 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                         {projects?.some(p => p.isFocused) && (
                             <Button size="small" startIcon={isFocusMode ? <Visibility /> : <VisibilityOff />} onClick={() => setIsFocusMode(!isFocusMode)} sx={{ color: isFocusMode ? 'primary.main' : 'var(--text-muted)', fontSize: '12px' }}>{isFocusMode ? 'Show All' : 'Focus'}</Button>
                         )}
+                        <Button
+                            size="small"
+                            startIcon={<Sort />}
+                            onClick={() => setIsRecentSorted(!isRecentSorted)}
+                            sx={{ color: isRecentSorted ? 'primary.main' : 'var(--text-muted)', fontSize: '12px' }}
+                        >
+                            Sort: {isRecentSorted ? 'Recent' : 'Oldest'}
+                        </Button>
                         <Button size="small" onClick={() => setIsAddingProject(!isAddingProject)} sx={{ color: 'primary.main', fontWeight: 700, fontSize: '12px' }}>{isAddingProject ? 'Cancel' : '+ New'}</Button>
                     </Stack>
                 </Box>

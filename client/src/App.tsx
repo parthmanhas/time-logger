@@ -68,6 +68,7 @@ const App: React.FC = () => {
   const [taskFilter, setTaskFilter] = useState<string>('pending');
   const [projectFilter, setProjectFilter] = useState<string>(() => localStorage.getItem('projectHistoryFilter') || 'all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [isRecentSorted, setIsRecentSorted] = useState<boolean>(() => localStorage.getItem('isRecentSorted') === 'true');
 
   const selectedTheme = themes[currentTheme] || themes.default;
 
@@ -90,8 +91,9 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('taskHistoryFilter', taskFilter);
     localStorage.setItem('projectHistoryFilter', projectFilter);
+    localStorage.setItem('isRecentSorted', String(isRecentSorted));
     document.body.setAttribute('data-theme', currentTheme);
-  }, [taskFilter, projectFilter, currentTheme]);
+  }, [taskFilter, projectFilter, currentTheme, isRecentSorted]);
 
   // Auth
   const handleLogin = async () => {
@@ -366,6 +368,8 @@ const App: React.FC = () => {
                         setSelectedProjectId={setSelectedProjectId}
                         handleUpdateProject={handleUpdateProject}
                         handleAddTask={handleAddTask}
+                        isRecentSorted={isRecentSorted}
+                        setIsRecentSorted={setIsRecentSorted}
                       />
 
                       <TimelineGraph tasks={graphTasks} />
