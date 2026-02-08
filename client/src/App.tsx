@@ -258,6 +258,7 @@ const App: React.FC = () => {
     const tB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : (b.timestamp as number || 0);
     return tB - tA;
   }), [baseFilteredTasks, dateFilter]);
+  const activeTask = useMemo(() => tasks?.find(t => t.isTracking), [tasks]);
 
   const graphTasks = useMemo(() => {
     if (dateFilter !== 'all') return filteredTasks;
@@ -304,7 +305,7 @@ const App: React.FC = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', background: 'transparent' }}>
-        <Container maxWidth="md">
+        <Container maxWidth="md" sx={{ pt: !activeTask && user && !loading ? { xs: 8, sm: 10 } : 0 }}>
           <Header
             user={user}
             handleLogin={handleLogin}
@@ -423,6 +424,104 @@ const App: React.FC = () => {
             </Box>
           )}
         </Container>
+
+        {/* Spacer to prevent content overlap with the sticky bottom bar */}
+        {!activeTask && user && !loading && <Box sx={{ height: { xs: 80, sm: 120 } }} />}
+
+        {!activeTask && user && !loading && (
+          <>
+            {/* Top Notification */}
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bgcolor: 'rgba(211, 47, 47, 0.1)',
+                backdropFilter: 'blur(15px)',
+                borderBottom: '2px solid',
+                borderColor: 'error.main',
+                py: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000,
+                boxShadow: '0 10px 40px rgba(211, 47, 47, 0.2)',
+                animation: 'popInTop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                '@keyframes popInTop': {
+                  from: { transform: 'translateY(-100%)' },
+                  to: { transform: 'translateY(0)' },
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                <ClockIcon sx={{ color: 'error.main', fontSize: 32, animation: 'pulse 2s infinite' }} />
+                <Typography variant="h4" sx={{
+                  color: 'white',
+                  fontWeight: 900,
+                  letterSpacing: '-0.5px',
+                  fontSize: { xs: '20px', sm: '28px' },
+                  textShadow: '0 0 20px rgba(211, 47, 47, 0.5)'
+                }}>
+                  NO ACTIVE TASK
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Bottom Notification */}
+            <Box
+              sx={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                bgcolor: 'rgba(211, 47, 47, 0.1)',
+                backdropFilter: 'blur(15px)',
+                borderTop: '2px solid',
+                borderColor: 'error.main',
+                py: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000,
+                boxShadow: '0 -10px 40px rgba(211, 47, 47, 0.2)',
+                animation: 'popInBottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                '@keyframes popInBottom': {
+                  from: { transform: 'translateY(100%)' },
+                  to: { transform: 'translateY(0)' },
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                <ClockIcon sx={{ color: 'error.main', fontSize: 32, animation: 'pulse 2s infinite' }} />
+                <Typography variant="h4" sx={{
+                  color: 'white',
+                  fontWeight: 900,
+                  letterSpacing: '-0.5px',
+                  fontSize: { xs: '20px', sm: '28px' },
+                  textShadow: '0 0 20px rgba(211, 47, 47, 0.5)'
+                }}>
+                  NO ACTIVE TASK
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', fontSize: '10px' }}>
+                Select a project and log a task to start tracking
+              </Typography>
+            </Box>
+
+            <style>
+              {`
+                @keyframes pulse {
+                  0% { transform: scale(1); opacity: 1; }
+                  50% { transform: scale(1.1); opacity: 0.8; }
+                  100% { transform: scale(1); opacity: 1; }
+                }
+              `}
+            </style>
+          </>
+        )}
       </Box >
     </ThemeProvider >
   );
