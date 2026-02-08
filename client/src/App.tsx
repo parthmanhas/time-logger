@@ -408,6 +408,7 @@ const App: React.FC = () => {
                         handleCompleteAndDuplicateTask={(id: string) => actions.handleCompleteAndDuplicateTask(id, user?.uid)}
                         handleUncompleteTask={actions.handleUncompleteTask}
                         handleDeleteTask={actions.handleDeleteTask}
+                        handleUpdateTask={actions.handleUpdateTask}
                         handleSetTaskActive={(id: string, active: boolean) => actions.handleSetTaskActive(id, active, user?.uid, tasks || [])}
                         setEditingTaskId={setEditingTaskId}
                         setEditingField={setEditingField}

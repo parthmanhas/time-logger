@@ -44,6 +44,7 @@ interface TaskRowProps {
     handleCompleteAndDuplicateTask: (id: string) => void;
     handleUncompleteTask: (id: string) => void;
     handleDeleteTask: (id: string) => void;
+    handleUpdateTask: (id: string, updates: Partial<Task>) => void;
     handleSetTaskActive: (id: string, active: boolean) => void;
     setEditingTaskId: (id: string | null) => void;
     setEditingField: (field: 'timestamp' | 'completedAt' | 'name' | null) => void;
@@ -65,6 +66,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     handleCompleteAndDuplicateTask,
     handleUncompleteTask,
     handleDeleteTask,
+    handleUpdateTask,
     handleSetTaskActive,
     setEditingTaskId,
     setEditingField,
@@ -205,6 +207,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             <Chip
                                 size="small"
                                 label={record.complexity}
+                                onClick={() => {
+                                    const nextComplexity = record.complexity === 'simple' ? 'complex' : 'simple';
+                                    handleUpdateTask(record.id, { complexity: nextComplexity });
+                                }}
                                 sx={{
                                     fontSize: '10px',
                                     height: 20,
@@ -212,7 +218,11 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                                     color: record.complexity === 'complex' ? '#d97706' : '#2ecc71',
                                     border: `1px solid ${record.complexity === 'complex' ? 'rgba(217, 119, 6, 0.2)' : 'rgba(46, 204, 113, 0.2)'}`,
                                     textTransform: 'capitalize',
-                                    fontWeight: 600
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        bgcolor: record.complexity === 'complex' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(46, 204, 113, 0.15)',
+                                    }
                                 }}
                             />
                         )}

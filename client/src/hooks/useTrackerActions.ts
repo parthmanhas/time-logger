@@ -145,6 +145,14 @@ export const useTrackerActions = () => {
         }
     };
 
+    const handleUpdateTask = async (id: string, updates: Partial<Task>) => {
+        try {
+            await updateDoc(doc(db, 'tasks', id), updates);
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
+    };
+
     const handleAddIdea = async (content: string, userId: string | undefined) => {
         if (!userId || !content.trim()) return;
         try {
@@ -220,6 +228,7 @@ export const useTrackerActions = () => {
         handleRenameProject,
         handleUpdateProject,
         handleDeleteTask,
+        handleUpdateTask,
         handleCompleteTask,
         handleUncompleteTask,
         handleSetTaskActive,
