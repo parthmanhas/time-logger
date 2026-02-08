@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import type { Project } from '../types';
 import { getDeterministicColor } from '../constants/colors';
+import { getTimeAgo } from '../utils/dateUtils';
 
 interface ProjectRowProps {
     project: Project;
@@ -32,6 +33,8 @@ interface ProjectRowProps {
     handleRenameProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
     setIsRenamingProject: (val: boolean) => void;
+    lastWorkedOn?: number;
+    pendingCount?: number;
 }
 
 const ProjectRow = memo(({
@@ -45,6 +48,8 @@ const ProjectRow = memo(({
     handleRenameProject,
     handleAddTask,
     setIsRenamingProject,
+    lastWorkedOn,
+    pendingCount,
 }: ProjectRowProps) => {
     const [taskName, setTaskName] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -110,28 +115,66 @@ const ProjectRow = memo(({
                         sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.3, px: 0.5, fontSize: '12px' } }}
                     />
                 ) : (
-                    <Box
-                        sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}
-                        onClick={() => setIsExpanded(!isExpanded)}
-                    >
-                        <Tooltip title={project.name} disableHoverListener={isExpanded}>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    '&:hover': { textDecoration: 'underline' },
-                                    whiteSpace: isExpanded ? 'normal' : 'nowrap',
-                                    overflow: isExpanded ? 'visible' : 'hidden',
-                                    textOverflow: isExpanded ? 'clip' : 'ellipsis',
-                                    fontSize: { xs: '11px', sm: '13px' },
-                                    wordBreak: 'break-word',
-                                    lineHeight: 1.1
-                                }}
-                            >
-                                {project.name}
-                            </Typography>
-                        </Tooltip>
+                    <>
+                        <Box
+                            sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                            onClick={() => setIsExpanded(!isExpanded)}
+                        >
+                            <Tooltip title={project.name} disableHoverListener={isExpanded}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' },
+                                        whiteSpace: isExpanded ? 'normal' : 'nowrap',
+                                        overflow: isExpanded ? 'visible' : 'hidden',
+                                        textOverflow: isExpanded ? 'clip' : 'ellipsis',
+                                        fontSize: { xs: '11px', sm: '13px' },
+                                        wordBreak: 'break-word',
+                                        lineHeight: 1.1,
+                                        mb: lastWorkedOn ? 0.2 : 0
+                                    }}
+                                >
+                                    {project.name}
+                                </Typography>
+                            </Tooltip>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {lastWorkedOn && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontSize: { xs: '8px', sm: '9px' },
+                                            color: 'var(--text-muted)',
+                                            opacity: 0.7,
+                                            lineHeight: 1
+                                        }}
+                                    >
+                                        {getTimeAgo(lastWorkedOn)}
+                                    </Typography>
+                                )}
+                                {pendingCount ? (
+                                    <Box
+                                        sx={{
+                                            bgcolor: 'primary.main',
+                                            color: 'white',
+                                            fontSize: { xs: '8px', sm: '9px' },
+                                            fontWeight: 800,
+                                            px: 0.6,
+                                            borderRadius: '10px',
+                                            minWidth: 14,
+                                            height: 14,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: '0 0 5px rgba(0,0,0,0.3)'
+                                        }}
+                                    >
+                                        {pendingCount}
+                                    </Box>
+                                ) : null}
+                            </Box>
+                        </Box>
                         <IconButton
                             size="small"
                             onClick={(e) => { e.stopPropagation(); setSelectedProjectId(project.id); setNewProjectName(project.name); setIsRenamingProject(true); }}
@@ -139,7 +182,7 @@ const ProjectRow = memo(({
                         >
                             <EditOutlined sx={{ fontSize: 9 }} />
                         </IconButton>
-                    </Box>
+                    </>
                 )}
             </Box>
             <TextField
@@ -223,6 +266,8 @@ interface ProjectSectionProps {
     setSelectedProjectId: (val: string | undefined) => void;
     handleRenameProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
+    projectLastWorkedOn: Map<string, number>;
+    projectPendingCounts: Map<string, number>;
 }
 
 export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
@@ -243,6 +288,8 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     setSelectedProjectId,
     handleRenameProject,
     handleAddTask,
+    projectLastWorkedOn,
+    projectPendingCounts,
 }) => {
     return (
         <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)' }}>
@@ -302,6 +349,8 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             handleRenameProject={handleRenameProject}
                             handleAddTask={handleAddTask}
                             setIsRenamingProject={setIsRenamingProject}
+                            lastWorkedOn={projectLastWorkedOn.get(p.id)}
+                            pendingCount={projectPendingCounts.get(p.id)}
                         />
                     ))}
                 </Stack>

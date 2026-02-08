@@ -269,6 +269,31 @@ const App: React.FC = () => {
     return acc;
   }, {}), [baseFilteredTasks]);
 
+  const projectLastWorkedOn = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!tasks) return map;
+    tasks.forEach(task => {
+      const ts = task.completedAt || task.timestamp;
+      const millis = ts instanceof Timestamp ? ts.toMillis() : (ts as number || 0);
+      const current = map.get(task.projectId) || 0;
+      if (millis > current) {
+        map.set(task.projectId, millis);
+      }
+    });
+    return map;
+  }, [tasks]);
+
+  const projectPendingCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!tasks) return map;
+    tasks.forEach(task => {
+      if (!task.completedAt) {
+        map.set(task.projectId, (map.get(task.projectId) || 0) + 1);
+      }
+    });
+    return map;
+  }, [tasks]);
+
   const sortedDays = useMemo(() => Object.keys(dailyTotals).sort((a, b) => b.localeCompare(a)).slice(0, 14), [dailyTotals]);
 
   return (
@@ -312,6 +337,8 @@ const App: React.FC = () => {
                     <Box>
                       <ProjectSection
                         projects={projects}
+                        projectLastWorkedOn={projectLastWorkedOn}
+                        projectPendingCounts={projectPendingCounts}
                         isFocusMode={isFocusMode}
                         setIsFocusMode={handleToggleFocusMode}
                         isAddingProject={isAddingProject}
