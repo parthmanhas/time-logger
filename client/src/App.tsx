@@ -49,7 +49,10 @@ const App: React.FC = () => {
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [editingProjectName, setEditingProjectName] = useState('');
+  const [editingProjectType, setEditingProjectType] = useState<'everyday' | 'finishing'>('everyday');
   const [isRenamingProject, setIsRenamingProject] = useState(false);
+  const [newProjectType, setNewProjectType] = useState<'everyday' | 'finishing'>('everyday');
 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'timestamp' | 'completedAt' | 'name' | null>(null);
@@ -106,7 +109,7 @@ const App: React.FC = () => {
   const handleCreateProject = async () => {
     const wordCount = newProjectName.trim().split(/\s+/).length;
     if (wordCount > 20) return alert('Project title cannot exceed 20 words');
-    const docRef = await actions.handleAddProject(newProjectName, newProjectDescription, user?.uid);
+    const docRef = await actions.handleAddProject(newProjectName, newProjectDescription, user?.uid, newProjectType);
     if (docRef) {
       setSelectedProjectId(docRef.id);
       setNewProjectName('');
@@ -115,12 +118,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRenameProject = async () => {
-    if (!newProjectName.trim() || !selectedProjectId) return;
-    if (newProjectName.trim().split(/\s+/).length > 20) return alert('Project title cannot exceed 20 words');
-    await actions.handleRenameProject(selectedProjectId, newProjectName);
-    setNewProjectName('');
+  const handleUpdateProject = async () => {
+    if (!editingProjectName.trim() || !selectedProjectId) return;
+    if (editingProjectName.trim().split(/\s+/).length > 20) return alert('Project title cannot exceed 20 words');
+    await actions.handleUpdateProject(selectedProjectId, { name: editingProjectName.trim(), projectType: editingProjectType });
+    setEditingProjectName('');
     setIsRenamingProject(false);
+    setSelectedProjectId(undefined);
   };
 
   const handleUpdateIdeaNotes = async (id: string) => {
@@ -345,6 +349,12 @@ const App: React.FC = () => {
                         setIsAddingProject={setIsAddingProject}
                         newProjectName={newProjectName}
                         setNewProjectName={setNewProjectName}
+                        newProjectType={newProjectType}
+                        setNewProjectType={setNewProjectType}
+                        editingProjectName={editingProjectName}
+                        setEditingProjectName={setEditingProjectName}
+                        editingProjectType={editingProjectType}
+                        setEditingProjectType={setEditingProjectType}
                         newProjectDescription={newProjectDescription}
                         setNewProjectDescription={setNewProjectDescription}
                         handleAddProject={handleCreateProject}
@@ -353,7 +363,7 @@ const App: React.FC = () => {
                         setIsRenamingProject={setIsRenamingProject}
                         selectedProjectId={selectedProjectId}
                         setSelectedProjectId={setSelectedProjectId}
-                        handleRenameProject={handleRenameProject}
+                        handleUpdateProject={handleUpdateProject}
                         handleAddTask={handleAddTask}
                       />
 

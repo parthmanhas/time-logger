@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import dayjs from 'dayjs';
-import type { Task } from '../types';
+import type { Task, Project } from '../types';
 import { getRandomProjectColor } from '../constants/colors';
 
 export const useTrackerActions = () => {
@@ -30,13 +30,14 @@ export const useTrackerActions = () => {
         }
     };
 
-    const handleAddProject = async (name: string, description: string, userId: string | undefined) => {
+    const handleAddProject = async (name: string, description: string, userId: string | undefined, projectType: 'everyday' | 'finishing' = 'everyday') => {
         if (!userId || !name.trim()) return;
         try {
             return await addDoc(collection(db, 'projects'), {
                 name,
                 description,
                 userId,
+                projectType,
                 color: getRandomProjectColor(),
                 createdAt: serverTimestamp(),
             });
@@ -58,6 +59,14 @@ export const useTrackerActions = () => {
             await updateDoc(doc(db, 'projects', id), { name: newName });
         } catch (error) {
             console.error('Error renaming project:', error);
+        }
+    };
+
+    const handleUpdateProject = async (id: string, updates: Partial<Project>) => {
+        try {
+            await updateDoc(doc(db, 'projects', id), updates);
+        } catch (error) {
+            console.error('Error updating project:', error);
         }
     };
 
@@ -209,6 +218,7 @@ export const useTrackerActions = () => {
         handleAddProject,
         handleToggleProjectFocus,
         handleRenameProject,
+        handleUpdateProject,
         handleDeleteTask,
         handleCompleteTask,
         handleUncompleteTask,

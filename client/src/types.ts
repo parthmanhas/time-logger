@@ -9,6 +9,7 @@ export interface Project {
     description?: string;
     isFocused?: boolean;
     color?: string;
+    projectType?: 'everyday' | 'finishing';
     createdAt: FirestoreDate;
 }
 

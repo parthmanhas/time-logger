@@ -9,6 +9,8 @@ import {
     TextField,
     IconButton,
     Tooltip,
+    ToggleButtonGroup,
+    ToggleButton as MuiToggleButton,
 } from '@mui/material';
 import {
     Add as PlusIcon,
@@ -17,6 +19,8 @@ import {
     PushPin,
     PushPinOutlined,
     EditOutlined,
+    Check,
+    Close,
 } from '@mui/icons-material';
 import type { Project } from '../types';
 import { getDeterministicColor } from '../constants/colors';
@@ -28,9 +32,11 @@ interface ProjectRowProps {
     isRenamingProject: boolean;
     selectedProjectId: string | undefined;
     setSelectedProjectId: (val: string | undefined) => void;
-    newProjectName: string;
-    setNewProjectName: (val: string) => void;
-    handleRenameProject: () => void;
+    editingProjectName: string;
+    setEditingProjectName: (val: string) => void;
+    editingProjectType: 'everyday' | 'finishing';
+    setEditingProjectType: (val: 'everyday' | 'finishing') => void;
+    handleUpdateProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
     setIsRenamingProject: (val: boolean) => void;
     lastWorkedOn?: number;
@@ -43,9 +49,11 @@ const ProjectRow = memo(({
     isRenamingProject,
     selectedProjectId,
     setSelectedProjectId,
-    newProjectName,
-    setNewProjectName,
-    handleRenameProject,
+    editingProjectName,
+    setEditingProjectName,
+    editingProjectType,
+    setEditingProjectType,
+    handleUpdateProject,
     handleAddTask,
     setIsRenamingProject,
     lastWorkedOn,
@@ -105,15 +113,34 @@ const ProjectRow = memo(({
                     {project.isFocused ? <PushPin sx={{ fontSize: { xs: 12, sm: 16 } }} /> : <PushPinOutlined sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                 </IconButton>
                 {isRenamingProject && selectedProjectId === project.id ? (
-                    <TextField
-                        size="small"
-                        value={newProjectName}
-                        onChange={(e) => setNewProjectName(e.target.value)}
-                        onBlur={handleRenameProject}
-                        onKeyPress={(e) => e.key === 'Enter' && handleRenameProject()}
-                        autoFocus
-                        sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.3, px: 0.5, fontSize: '12px' } }}
-                    />
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <TextField
+                                size="small"
+                                value={editingProjectName}
+                                onChange={(e) => setEditingProjectName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleUpdateProject()}
+                                autoFocus
+                                sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.3, px: 0.5, fontSize: '11px' } }}
+                            />
+                            <IconButton size="small" onClick={handleUpdateProject} sx={{ p: 0.2, color: 'success.main' }}>
+                                <Check sx={{ fontSize: 16 }} />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => setIsRenamingProject(false)} sx={{ p: 0.2, color: 'error.main' }}>
+                                <Close sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        </Box>
+                        <ToggleButtonGroup
+                            value={editingProjectType}
+                            exclusive
+                            onChange={(_, val) => val && setEditingProjectType(val)}
+                            size="small"
+                            sx={{ height: 20, '& .MuiToggleButton-root': { py: 0, px: 1, fontSize: '8px' } }}
+                        >
+                            <MuiToggleButton value="everyday">Everyday</MuiToggleButton>
+                            <MuiToggleButton value="finishing">Finishing</MuiToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
                 ) : (
                     <>
                         <Box
@@ -139,6 +166,25 @@ const ProjectRow = memo(({
                                     {project.name}
                                 </Typography>
                             </Tooltip>
+                            {project.projectType && (
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontSize: '7px',
+                                        fontWeight: 800,
+                                        textTransform: 'uppercase',
+                                        color: project.projectType === 'everyday' ? '#3b82f6' : '#ec4899',
+                                        bgcolor: project.projectType === 'everyday' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(236, 72, 153, 0.1)',
+                                        px: 0.5,
+                                        borderRadius: '2px',
+                                        width: 'fit-content',
+                                        mb: 0.2,
+                                        lineHeight: 1.2
+                                    }}
+                                >
+                                    {project.projectType}
+                                </Typography>
+                            )}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 {lastWorkedOn && (
                                     <Typography
@@ -177,7 +223,13 @@ const ProjectRow = memo(({
                         </Box>
                         <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); setSelectedProjectId(project.id); setNewProjectName(project.name); setIsRenamingProject(true); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProjectId(project.id);
+                                setEditingProjectName(project.name);
+                                setEditingProjectType(project.projectType || 'everyday');
+                                setIsRenamingProject(true);
+                            }}
                             sx={{ p: 0.1, opacity: 0.3, ml: 0.2, flexShrink: 0 }}
                         >
                             <EditOutlined sx={{ fontSize: 9 }} />
@@ -256,6 +308,12 @@ interface ProjectSectionProps {
     setIsAddingProject: (val: boolean) => void;
     newProjectName: string;
     setNewProjectName: (val: string) => void;
+    newProjectType: 'everyday' | 'finishing';
+    setNewProjectType: (val: 'everyday' | 'finishing') => void;
+    editingProjectName: string;
+    setEditingProjectName: (val: string) => void;
+    editingProjectType: 'everyday' | 'finishing';
+    setEditingProjectType: (val: 'everyday' | 'finishing') => void;
     newProjectDescription: string;
     setNewProjectDescription: (val: string) => void;
     handleAddProject: () => void;
@@ -264,7 +322,7 @@ interface ProjectSectionProps {
     setIsRenamingProject: (val: boolean) => void;
     selectedProjectId: string | undefined;
     setSelectedProjectId: (val: string | undefined) => void;
-    handleRenameProject: () => void;
+    handleUpdateProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
     projectLastWorkedOn: Map<string, number>;
     projectPendingCounts: Map<string, number>;
@@ -278,6 +336,12 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     setIsAddingProject,
     newProjectName,
     setNewProjectName,
+    newProjectType,
+    setNewProjectType,
+    editingProjectName,
+    setEditingProjectName,
+    editingProjectType,
+    setEditingProjectType,
     newProjectDescription,
     setNewProjectDescription,
     handleAddProject,
@@ -286,11 +350,49 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     setIsRenamingProject,
     selectedProjectId,
     setSelectedProjectId,
-    handleRenameProject,
+    handleUpdateProject,
     handleAddTask,
     projectLastWorkedOn,
     projectPendingCounts,
 }) => {
+    const everydayProjects = projects?.filter(p => (!isFocusMode || p.isFocused) && (!p.projectType || p.projectType === 'everyday')) || [];
+    const finishingProjects = projects?.filter(p => (!isFocusMode || p.isFocused) && p.projectType === 'finishing') || [];
+
+    const renderProjectList = (title: string, list: Project[]) => (
+        <Box sx={{ mb: 3 }}>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 800, mb: 1.5, display: 'block', letterSpacing: 1, opacity: 0.6 }}>
+                {title} ({list.length})
+            </Typography>
+            <Stack spacing={1.5}>
+                {list.length > 0 ? (
+                    list.map((p) => (
+                        <ProjectRow
+                            key={p.id}
+                            project={p}
+                            handleToggleProjectFocus={handleToggleProjectFocus}
+                            isRenamingProject={isRenamingProject}
+                            setIsRenamingProject={setIsRenamingProject}
+                            selectedProjectId={selectedProjectId}
+                            setSelectedProjectId={setSelectedProjectId}
+                            editingProjectName={editingProjectName}
+                            setEditingProjectName={setEditingProjectName}
+                            editingProjectType={editingProjectType}
+                            setEditingProjectType={setEditingProjectType}
+                            handleUpdateProject={handleUpdateProject}
+                            handleAddTask={handleAddTask}
+                            lastWorkedOn={projectLastWorkedOn.get(p.id)}
+                            pendingCount={projectPendingCounts.get(p.id)}
+                        />
+                    ))
+                ) : (
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.1)', fontStyle: 'italic', pl: 1 }}>
+                        No projects in this category
+                    </Typography>
+                )}
+            </Stack>
+        </Box>
+    );
+
     return (
         <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 'var(--border-radius)' }}>
             <CardContent sx={{ p: 3 }}>
@@ -324,6 +426,18 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             onChange={(e) => setNewProjectDescription(e.target.value)}
                             sx={{ '& .MuiInputBase-input': { cursor: 'text', caretColor: 'primary.main' } }}
                         />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600 }}>TYPE:</Typography>
+                            <ToggleButtonGroup
+                                value={newProjectType}
+                                exclusive
+                                onChange={(_, val) => val && setNewProjectType(val)}
+                                size="small"
+                            >
+                                <MuiToggleButton value="everyday">Everyday</MuiToggleButton>
+                                <MuiToggleButton value="finishing">Finishing</MuiToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                         <Button
                             variant="contained"
                             onClick={handleAddProject}
@@ -335,25 +449,8 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                         </Button>
                     </Box>
                 )}
-                <Stack spacing={1.5}>
-                    {projects?.filter(p => !isFocusMode || p.isFocused).map((p) => (
-                        <ProjectRow
-                            key={p.id}
-                            project={p}
-                            handleToggleProjectFocus={handleToggleProjectFocus}
-                            isRenamingProject={isRenamingProject}
-                            selectedProjectId={selectedProjectId}
-                            setSelectedProjectId={setSelectedProjectId}
-                            newProjectName={newProjectName}
-                            setNewProjectName={setNewProjectName}
-                            handleRenameProject={handleRenameProject}
-                            handleAddTask={handleAddTask}
-                            setIsRenamingProject={setIsRenamingProject}
-                            lastWorkedOn={projectLastWorkedOn.get(p.id)}
-                            pendingCount={projectPendingCounts.get(p.id)}
-                        />
-                    ))}
-                </Stack>
+                {renderProjectList("EVERYDAY PROJECTS", everydayProjects)}
+                {renderProjectList("CAN BE FINISHED", finishingProjects)}
             </CardContent>
         </Card >
     );
