@@ -354,6 +354,7 @@ const App: React.FC = () => {
                         projects={projects}
                         projectLastWorkedOn={projectLastWorkedOn}
                         projectPendingCounts={projectPendingCounts}
+                        tasks={tasks || []}
                         isFocusMode={isFocusMode}
                         setIsFocusMode={handleToggleFocusMode}
                         isAddingProject={isAddingProject}
@@ -376,6 +377,7 @@ const App: React.FC = () => {
                         setSelectedProjectId={setSelectedProjectId}
                         handleUpdateProject={handleUpdateProject}
                         handleAddTask={handleAddTask}
+                        handleToggleEverydayTask={(projectId: string, date: Date) => actions.handleToggleEverydayTask(projectId, date, user?.uid, tasks || [])}
                         isRecentSorted={isRecentSorted}
                         setIsRecentSorted={setIsRecentSorted}
                       />

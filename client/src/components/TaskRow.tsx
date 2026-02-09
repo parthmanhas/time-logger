@@ -245,7 +245,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </TableCell>
             <TableCell align="right" sx={{ width: { xs: 60, sm: 220 }, p: { xs: 0.5, sm: 1.5 } }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} alignItems="center" justifyContent="flex-end">
-                    {!record.completedAt && (
+                    {!record.completedAt && project?.projectType !== 'everyday' && (
                         <Tooltip title={isTracking ? "Stop Focusing" : "Start Focusing"}>
                             <IconButton
                                 size="small"
@@ -291,20 +291,22 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                         )
                     ) : (
                         <Stack direction="row" spacing={0.5}>
-                            <Tooltip title="Complete & Duplicate (Take Break)">
-                                <IconButton
-                                    size="small"
-                                    onClick={() => handleCompleteAndDuplicateTask(record.id)}
-                                    sx={{
-                                        color: '#d97706',
-                                        bgcolor: 'rgba(217, 119, 6, 0.05)',
-                                        '&:hover': { bgcolor: 'rgba(217, 119, 6, 0.15)' },
-                                        p: 0.5
-                                    }}
-                                >
-                                    <BreakIcon sx={{ fontSize: 20 }} />
-                                </IconButton>
-                            </Tooltip>
+                            {project?.projectType !== 'everyday' && (
+                                <Tooltip title="Complete & Duplicate (Take Break)">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleCompleteAndDuplicateTask(record.id)}
+                                        sx={{
+                                            color: '#d97706',
+                                            bgcolor: 'rgba(217, 119, 6, 0.05)',
+                                            '&:hover': { bgcolor: 'rgba(217, 119, 6, 0.15)' },
+                                            p: 0.5
+                                        }}
+                                    >
+                                        <BreakIcon sx={{ fontSize: 20 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
                             <Tooltip title="Complete Task">
                                 <IconButton
                                     size="small"

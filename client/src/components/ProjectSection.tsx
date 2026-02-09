@@ -24,7 +24,8 @@ import {
     Sort,
 } from '@mui/icons-material';
 import { Timestamp } from 'firebase/firestore';
-import type { Project } from '../types';
+import dayjs from 'dayjs';
+import type { Project, Task } from '../types';
 import { getDeterministicColor } from '../constants/colors';
 import { getTimeAgo } from '../utils/dateUtils';
 
@@ -40,10 +41,64 @@ interface ProjectRowProps {
     setEditingProjectType: (val: 'everyday' | 'finishing') => void;
     handleUpdateProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
+    handleToggleEverydayTask: (projectId: string, date: Date) => void;
     setIsRenamingProject: (val: boolean) => void;
     lastWorkedOn?: number;
     pendingCount?: number;
+    tasks: Task[];
 }
+
+const EverydayHeatmap = ({ tasks, onToggle }: { tasks: Task[], onToggle: (date: Date) => void }) => {
+    const today = dayjs().startOf('day');
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+        days.push(today.subtract(i, 'day'));
+    }
+
+    const tasksOnDaySymbol = (date: dayjs.Dayjs) => {
+        return tasks.some(t => {
+            const taskDate = dayjs(t.timestamp instanceof Timestamp ? t.timestamp.toDate() : t.timestamp);
+            return taskDate.isSame(date, 'day');
+        });
+    };
+
+    return (
+        <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(15, 2fr)',
+            gap: 0.75,
+            flexShrink: 0,
+            alignItems: 'center',
+            maxWidth: 'fit-content'
+        }}>
+            {days.map(day => {
+                const isActive = tasksOnDaySymbol(day);
+                const isToday = day.isSame(today, 'day');
+                return (
+                    <Tooltip key={day.toISOString()} title={day.format('MMM D')}>
+                        <Box
+                            onClick={() => onToggle(day.toDate())}
+                            sx={{
+                                width: { xs: 10, sm: 12 },
+                                height: { xs: 10, sm: 12 },
+                                bgcolor: isActive ? 'primary.main' : 'rgba(255,255,255,0.05)',
+                                borderRadius: '2px',
+                                border: isToday ? '2px solid #fff' : 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.1s',
+                                '&:hover': {
+                                    bgcolor: isActive ? 'primary.dark' : 'rgba(255,255,255,0.2)',
+                                    transform: 'scale(1.2)',
+                                    zIndex: 1
+                                }
+                            }}
+                        />
+                    </Tooltip>
+                );
+            })}
+        </Box>
+    );
+};
 
 const ProjectRow = memo(({
     project,
@@ -57,9 +112,11 @@ const ProjectRow = memo(({
     setEditingProjectType,
     handleUpdateProject,
     handleAddTask,
+    handleToggleEverydayTask,
     setIsRenamingProject,
     lastWorkedOn,
     pendingCount,
+    tasks,
 }: ProjectRowProps) => {
     const [taskName, setTaskName] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -87,20 +144,18 @@ const ProjectRow = memo(({
             borderRadius: 'var(--border-radius)',
             border: '1px solid',
             borderColor: 'var(--border-color)',
-            borderLeft: `3px solid ${projectColor}`,
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
-                borderColor: projectColor,
+                borderColor: 'primary.main',
                 bgcolor: 'rgba(255,255,255,0.03)',
-                boxShadow: `0 0 15px ${projectColor}1A`,
                 transform: 'translateX(2px)'
             }
         }}>
             <Box
                 sx={{
-                    width: isExpanded ? { xs: 'auto', sm: 140 } : { xs: 80, sm: 140 },
-                    maxWidth: isExpanded ? { xs: 150, sm: 140 } : { xs: 80, sm: 140 },
-                    flexShrink: 0,
+                    width: project.projectType === 'everyday' ? 'auto' : { xs: 80, sm: 140 },
+                    flex: project.projectType === 'everyday' ? 1 : 'none',
+                    minWidth: 0,
                     display: 'flex',
                     alignItems: 'center',
                     overflow: 'hidden',
@@ -110,7 +165,7 @@ const ProjectRow = memo(({
                 <IconButton
                     size="small"
                     onClick={() => handleToggleProjectFocus(project.id, !!project.isFocused)}
-                    sx={{ color: project.isFocused ? projectColor : 'rgba(255,255,255,0.2)', p: 0.2, mr: 0.5, flexShrink: 0 }}
+                    sx={{ color: project.isFocused ? projectColor : 'rgba(255,255,255,0.2)', p: 0.2, mr: 1, flexShrink: 0 }}
                 >
                     {project.isFocused ? <PushPin sx={{ fontSize: { xs: 12, sm: 16 } }} /> : <PushPinOutlined sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                 </IconButton>
@@ -239,65 +294,77 @@ const ProjectRow = memo(({
                     </>
                 )}
             </Box>
-            <TextField
-                size="small"
-                placeholder="What are you doing?"
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && onAddTask()}
-                sx={{
-                    flex: 1,
-                    minWidth: 0,
-                    '& .MuiOutlinedInput-root': {
-                        bgcolor: 'rgba(255,255,255,0.05)',
-                        height: { xs: 26, sm: 32 },
-                        cursor: 'text',
-                        '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                        '&.Mui-focused fieldset': { borderColor: 'primary.main' },
-                    },
-                    '& .MuiInputBase-input': {
-                        py: 0,
-                        fontSize: { xs: '12px', sm: '13px' },
-                        px: 1,
-                        cursor: 'text',
-                        caretColor: 'primary.main'
-                    }
-                }}
-            />
-            <Button
-                variant="outlined"
-                size="small"
-                onClick={toggleComplexity}
-                sx={{
-                    minWidth: { xs: 50, sm: 70 },
-                    height: { xs: 24, sm: 28 },
-                    fontSize: { xs: '9px', sm: '11px' },
-                    p: 0,
-                    borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(46, 204, 113, 0.2)',
-                    color: complexity === 'complex' ? '#d97706' : '#2ecc71',
-                    '&:hover': {
-                        borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.5)' : 'rgba(46, 204, 113, 0.4)',
-                        bgcolor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.05)' : 'rgba(46, 204, 113, 0.05)'
-                    }
-                }}
-            >
-                {complexity}
-            </Button>
-            <IconButton
-                onClick={onAddTask}
-                sx={{
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    width: { xs: 24, sm: 28 },
-                    height: { xs: 24, sm: 28 },
-                    borderRadius: '4px',
-                    '&:hover': { bgcolor: 'primary.dark' },
-                    p: 0
-                }}
-            >
-                <PlusIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
-            </IconButton>
+            {project.projectType === 'everyday' ? (
+                <>
+                    <Box sx={{ flex: 1 }} />
+                    <EverydayHeatmap
+                        tasks={tasks.filter(t => t.projectId === project.id)}
+                        onToggle={(date) => handleToggleEverydayTask(project.id, date)}
+                    />
+                </>
+            ) : (
+                <>
+                    <TextField
+                        size="small"
+                        placeholder="What are you doing?"
+                        value={taskName}
+                        onChange={(e) => setTaskName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && onAddTask()}
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            '& .MuiOutlinedInput-root': {
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                height: { xs: 26, sm: 32 },
+                                cursor: 'text',
+                                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                                '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                                '&.Mui-focused fieldset': { borderColor: 'primary.main' },
+                            },
+                            '& .MuiInputBase-input': {
+                                py: 0,
+                                fontSize: { xs: '12px', sm: '13px' },
+                                px: 1,
+                                cursor: 'text',
+                                caretColor: 'primary.main'
+                            }
+                        }}
+                    />
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={toggleComplexity}
+                        sx={{
+                            minWidth: { xs: 50, sm: 70 },
+                            height: { xs: 24, sm: 28 },
+                            fontSize: { xs: '9px', sm: '11px' },
+                            p: 0,
+                            borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(46, 204, 113, 0.2)',
+                            color: complexity === 'complex' ? '#d97706' : '#2ecc71',
+                            '&:hover': {
+                                borderColor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.5)' : 'rgba(46, 204, 113, 0.4)',
+                                bgcolor: complexity === 'complex' ? 'rgba(217, 119, 6, 0.05)' : 'rgba(46, 204, 113, 0.05)'
+                            }
+                        }}
+                    >
+                        {complexity}
+                    </Button>
+                    <IconButton
+                        onClick={onAddTask}
+                        sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            width: { xs: 24, sm: 28 },
+                            height: { xs: 24, sm: 28 },
+                            borderRadius: '4px',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            p: 0
+                        }}
+                    >
+                        <PlusIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                    </IconButton>
+                </>
+            )}
         </Box>
     );
 });
@@ -326,8 +393,10 @@ interface ProjectSectionProps {
     setSelectedProjectId: (val: string | undefined) => void;
     handleUpdateProject: () => void;
     handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
+    handleToggleEverydayTask: (projectId: string, date: Date) => void;
     projectLastWorkedOn: Map<string, number>;
     projectPendingCounts: Map<string, number>;
+    tasks: Task[];
     isRecentSorted: boolean;
     setIsRecentSorted: (val: boolean) => void;
 }
@@ -356,8 +425,10 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     setSelectedProjectId,
     handleUpdateProject,
     handleAddTask,
+    handleToggleEverydayTask,
     projectLastWorkedOn,
     projectPendingCounts,
+    tasks,
     isRecentSorted,
     setIsRecentSorted,
 }) => {
@@ -401,8 +472,10 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             setEditingProjectType={setEditingProjectType}
                             handleUpdateProject={handleUpdateProject}
                             handleAddTask={handleAddTask}
+                            handleToggleEverydayTask={handleToggleEverydayTask}
                             lastWorkedOn={projectLastWorkedOn.get(p.id)}
                             pendingCount={projectPendingCounts.get(p.id)}
+                            tasks={tasks || []}
                         />
                     ))
                 ) : (

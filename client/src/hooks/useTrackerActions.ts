@@ -221,6 +221,34 @@ export const useTrackerActions = () => {
         }
     };
 
+    const handleToggleEverydayTask = async (projectId: string, date: Date, userId: string | undefined, tasksForProject: Task[]) => {
+        if (!userId) return;
+        try {
+            const targetDate = dayjs(date).startOf('day');
+            const existingTask = tasksForProject.find(t => {
+                const taskDate = dayjs(t.timestamp instanceof Timestamp ? t.timestamp.toDate() : t.timestamp);
+                return taskDate.isSame(targetDate, 'day');
+            });
+
+            if (existingTask) {
+                await deleteDoc(doc(db, 'tasks', existingTask.id));
+            } else {
+                await addDoc(collection(db, 'tasks'), {
+                    name: "Completed",
+                    projectId: projectId,
+                    userId: userId,
+                    complexity: 'simple',
+                    timestamp: targetDate.toDate(),
+                    createdAt: serverTimestamp(),
+                    completedAt: targetDate.add(1, 'hour').toDate(),
+                    duration: 3600000 // 1 hour
+                });
+            }
+        } catch (error) {
+            console.error('Error toggling everyday task:', error);
+        }
+    };
+
     return {
         handleAddTask,
         handleAddProject,
@@ -236,5 +264,6 @@ export const useTrackerActions = () => {
         handleAddIdea,
         handleUpdateIdeaNotes,
         handleDeleteIdea,
+        handleToggleEverydayTask,
     };
 };
