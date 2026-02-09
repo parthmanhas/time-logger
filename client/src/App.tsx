@@ -105,8 +105,8 @@ const App: React.FC = () => {
   };
 
   // Wrapped Actions
-  const handleAddTask = (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => {
-    actions.handleAddTask(projectId, taskName, user?.uid, complexity);
+  const handleAddTask = (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking: boolean = false) => {
+    actions.handleAddTask(projectId, taskName, user?.uid, complexity, startTracking);
   };
 
   const handleCreateProject = async () => {

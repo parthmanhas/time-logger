@@ -14,17 +14,29 @@ import type { Task, Project } from '../types';
 import { getRandomProjectColor } from '../constants/colors';
 
 export const useTrackerActions = () => {
-    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined, complexity?: 'simple' | 'complex') => {
+    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined, complexity?: 'simple' | 'complex', startTracking: boolean = false) => {
         if (!userId || !taskName.trim()) return;
         try {
-            await addDoc(collection(db, 'tasks'), {
+            const now = Date.now();
+            const docRef = await addDoc(collection(db, 'tasks'), {
                 name: taskName,
                 projectId: projectId,
                 userId: userId,
                 complexity: complexity || 'simple',
-                timestamp: serverTimestamp(),
+                timestamp: startTracking ? now : serverTimestamp(),
                 createdAt: serverTimestamp(),
+                isTracking: startTracking
             });
+
+            if (startTracking) {
+                // Add a note in Ideas section
+                await addDoc(collection(db, 'ideas'), {
+                    content: `Focus started: ${taskName} at ${dayjs(now).format('HH:mm')}`,
+                    userId: userId,
+                    createdAt: serverTimestamp(),
+                });
+            }
+            return docRef;
         } catch (error) {
             console.error('Error adding task:', error);
         }

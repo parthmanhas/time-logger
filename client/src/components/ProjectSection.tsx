@@ -22,6 +22,7 @@ import {
     Check,
     Close,
     Sort,
+    PlayArrow as PlayIcon,
 } from '@mui/icons-material';
 import { Timestamp } from 'firebase/firestore';
 import dayjs from 'dayjs';
@@ -40,7 +41,7 @@ interface ProjectRowProps {
     editingProjectType: 'everyday' | 'finishing';
     setEditingProjectType: (val: 'everyday' | 'finishing') => void;
     handleUpdateProject: () => void;
-    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean) => void;
     handleToggleEverydayTask: (projectId: string, date: Date) => void;
     setIsRenamingProject: (val: boolean) => void;
     lastWorkedOn?: number;
@@ -291,6 +292,26 @@ const ProjectRow = memo(({
                         >
                             <EditOutlined sx={{ fontSize: 9 }} />
                         </IconButton>
+                        {project.projectType === 'everyday' && (
+                            <Tooltip title="Start project task">
+                                <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddTask(project.id, project.name, 'simple', true);
+                                    }}
+                                    sx={{
+                                        p: 0.5,
+                                        ml: 0.5,
+                                        color: 'primary.main',
+                                        bgcolor: 'rgba(37, 99, 235, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(37, 99, 235, 0.2)' }
+                                    }}
+                                >
+                                    <PlayIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </>
                 )}
             </Box>
@@ -392,7 +413,7 @@ interface ProjectSectionProps {
     selectedProjectId: string | undefined;
     setSelectedProjectId: (val: string | undefined) => void;
     handleUpdateProject: () => void;
-    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex') => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean) => void;
     handleToggleEverydayTask: (projectId: string, date: Date) => void;
     projectLastWorkedOn: Map<string, number>;
     projectPendingCounts: Map<string, number>;
