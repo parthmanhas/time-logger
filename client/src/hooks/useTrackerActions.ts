@@ -14,7 +14,7 @@ import type { Task, Project } from '../types';
 import { getRandomProjectColor } from '../constants/colors';
 
 export const useTrackerActions = () => {
-    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined, complexity?: 'simple' | 'complex', startTracking: boolean = false) => {
+    const handleAddTask = async (projectId: string, taskName: string, userId: string | undefined, complexity?: 'simple' | 'complex', startTracking: boolean = false, taskId?: string) => {
         if (!userId || !taskName.trim()) return;
         try {
             const now = Date.now();
@@ -22,6 +22,7 @@ export const useTrackerActions = () => {
                 name: taskName,
                 projectId: projectId,
                 userId: userId,
+                taskId: taskId || '',
                 complexity: complexity || 'simple',
                 timestamp: startTracking ? now : serverTimestamp(),
                 createdAt: serverTimestamp(),
@@ -31,7 +32,7 @@ export const useTrackerActions = () => {
             if (startTracking) {
                 // Add a note in Ideas section
                 await addDoc(collection(db, 'ideas'), {
-                    content: `Focus started: ${taskName} at ${dayjs(now).format('HH:mm')}`,
+                    content: `Focus started: ${taskName} [${taskId || ''}] at ${dayjs(now).format('HH:mm')}`,
                     userId: userId,
                     createdAt: serverTimestamp(),
                 });
@@ -132,7 +133,7 @@ export const useTrackerActions = () => {
 
                     // Add a note in Ideas section
                     await addDoc(collection(db, 'ideas'), {
-                        content: `Focus started: ${task.name} at ${timeStr}`,
+                        content: `Focus started: ${task.name}${task.taskId ? ` [${task.taskId}]` : ''} at ${timeStr}`,
                         userId: userId,
                         createdAt: serverTimestamp(),
                     });
@@ -210,11 +211,12 @@ export const useTrackerActions = () => {
                     isTracking: false
                 });
 
-                // 2. Create duplicate task (same name, project, complexity)
+                // 2. Create duplicate task (same name, project, complexity, taskId)
                 await addDoc(collection(db, 'tasks'), {
                     name: task.name,
                     projectId: task.projectId,
                     userId: userId,
+                    taskId: task.taskId || '',
                     complexity: task.complexity || 'simple',
                     timestamp: serverTimestamp(),
                     createdAt: serverTimestamp(),
@@ -223,7 +225,7 @@ export const useTrackerActions = () => {
 
                 // 3. Log break in Ideas
                 await addDoc(collection(db, 'ideas'), {
-                    content: `Break taken: ${task.name} at ${dayjs(now).format('HH:mm')}. Task duplicated for later.`,
+                    content: `Break taken: ${task.name}${task.taskId ? ` [${task.taskId}]` : ''} at ${dayjs(now).format('HH:mm')}. Task duplicated for later.`,
                     userId: userId,
                     createdAt: serverTimestamp(),
                 });
@@ -233,22 +235,27 @@ export const useTrackerActions = () => {
         }
     };
 
-    const handleToggleEverydayTask = async (projectId: string, date: Date, userId: string | undefined, tasksForProject: Task[]) => {
+    const handleToggleEverydayTask = async (projectId: string, date: Date, userId: string | undefined, tasks: Task[]) => {
         if (!userId) return;
         try {
             const targetDate = dayjs(date).startOf('day');
-            const existingTask = tasksForProject.find(t => {
+            const existingTask = tasks.find(t => {
                 const taskDate = dayjs(t.timestamp instanceof Timestamp ? t.timestamp.toDate() : t.timestamp);
-                return taskDate.isSame(targetDate, 'day');
+                return t.projectId === projectId && taskDate.isSame(targetDate, 'day');
             });
 
             if (existingTask) {
                 await deleteDoc(doc(db, 'tasks', existingTask.id));
             } else {
+                const nextId = tasks && tasks.length > 0
+                    ? Math.max(...tasks.map(t => parseInt(t.taskId || '0') || 0)) + 1
+                    : 1;
+
                 await addDoc(collection(db, 'tasks'), {
                     name: "Completed",
                     projectId: projectId,
                     userId: userId,
+                    taskId: String(nextId),
                     complexity: 'simple',
                     timestamp: targetDate.toDate(),
                     createdAt: serverTimestamp(),

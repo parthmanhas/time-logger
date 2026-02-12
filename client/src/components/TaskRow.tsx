@@ -189,6 +189,21 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                         </Stack>
                     )}
                     <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
+                        {record.taskId && (
+                            <Chip
+                                size="small"
+                                label={`#${record.taskId}`}
+                                variant="outlined"
+                                sx={{
+                                    fontSize: '10px',
+                                    height: 20,
+                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                    color: 'var(--text-muted)',
+                                    fontWeight: 700,
+                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                }}
+                            />
+                        )}
                         {project && (
                             <Chip
                                 size="small"

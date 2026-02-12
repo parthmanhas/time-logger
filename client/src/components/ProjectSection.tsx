@@ -41,7 +41,7 @@ interface ProjectRowProps {
     editingProjectType: 'everyday' | 'finishing';
     setEditingProjectType: (val: 'everyday' | 'finishing') => void;
     handleUpdateProject: () => void;
-    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean) => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean, taskId?: string) => void;
     handleToggleEverydayTask: (projectId: string, date: Date) => void;
     setIsRenamingProject: (val: boolean) => void;
     lastWorkedOn?: number;
@@ -413,7 +413,7 @@ interface ProjectSectionProps {
     selectedProjectId: string | undefined;
     setSelectedProjectId: (val: string | undefined) => void;
     handleUpdateProject: () => void;
-    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean) => void;
+    handleAddTask: (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking?: boolean, taskId?: string) => void;
     handleToggleEverydayTask: (projectId: string, date: Date) => void;
     projectLastWorkedOn: Map<string, number>;
     projectPendingCounts: Map<string, number>;

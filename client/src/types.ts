@@ -18,6 +18,7 @@ export interface Task {
     userId: string;
     projectId: string;
     name: string;
+    taskId?: string;
     timestamp: FirestoreDate;
     completedAt?: FirestoreDate;
     duration?: number;

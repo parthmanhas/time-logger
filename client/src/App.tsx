@@ -106,7 +106,10 @@ const App: React.FC = () => {
 
   // Wrapped Actions
   const handleAddTask = (projectId: string, taskName: string, complexity?: 'simple' | 'complex', startTracking: boolean = false) => {
-    actions.handleAddTask(projectId, taskName, user?.uid, complexity, startTracking);
+    const nextId = tasks && tasks.length > 0
+      ? Math.max(...tasks.map(t => parseInt(t.taskId || '0') || 0)) + 1
+      : 1;
+    actions.handleAddTask(projectId, taskName, user?.uid, complexity, startTracking, String(nextId));
   };
 
   const handleCreateProject = async () => {
@@ -211,12 +214,13 @@ const App: React.FC = () => {
   const exportToCSV = async () => {
     if (!tasks || tasks.length === 0) return;
     const projectMap = new Map(projects?.map((p: Project) => [p.id, p.name]));
-    const headers = ['Start Time', 'End Time', 'Duration (min)', 'Project', 'Task'];
+    const headers = ['Start Time', 'End Time', 'Duration (min)', 'Project', 'Task ID', 'Task'];
     const rows = tasks.map((task: Task) => [
       formatDate(task.timestamp, 'YYYY-MM-DD HH:mm'),
       task.completedAt ? formatDate(task.completedAt, 'YYYY-MM-DD HH:mm') : 'Pending',
       task.duration ? Math.round(task.duration / 60000).toString() : '0',
       projectMap.get(task.projectId) || 'Unknown',
+      task.taskId || '',
       task.name
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
