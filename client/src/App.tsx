@@ -15,6 +15,7 @@ import {
   AccessTime as ClockIcon,
   Lightbulb as BulbIcon,
   Google as GoogleIcon,
+  PlayArrow as PlayIcon,
 } from '@mui/icons-material';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import {
@@ -446,6 +447,83 @@ const App: React.FC = () => {
 
         {/* Spacer to prevent content overlap with the sticky bottom bar */}
         {!activeTask && user && !loading && <Box sx={{ height: { xs: 80, sm: 120 } }} />}
+
+        {activeTask && user && !loading && (
+          <>
+            {/* Top Notification */}
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bgcolor: 'rgba(16, 185, 129, 0.1)',
+                backdropFilter: 'blur(15px)',
+                borderBottom: '2px solid',
+                borderColor: '#10b981',
+                py: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000,
+                boxShadow: '0 10px 40px rgba(16, 185, 129, 0.2)',
+                animation: 'popInTop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                <PlayIcon sx={{ color: '#10b981', fontSize: 32, animation: 'pulse 2s infinite' }} />
+                <Typography variant="h4" sx={{
+                  color: 'white',
+                  fontWeight: 900,
+                  letterSpacing: '-0.5px',
+                  fontSize: { xs: '20px', sm: '28px' },
+                  textShadow: '0 0 20px rgba(16, 185, 129, 0.5)'
+                }}>
+                  TASK IN PROGRESS
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Bottom Notification */}
+            <Box
+              sx={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                bgcolor: 'rgba(16, 185, 129, 0.1)',
+                backdropFilter: 'blur(15px)',
+                borderTop: '2px solid',
+                borderColor: '#10b981',
+                py: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000,
+                boxShadow: '0 -10px 40px rgba(16, 185, 129, 0.2)',
+                animation: 'popInBottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                <PlayIcon sx={{ color: '#10b981', fontSize: 32, animation: 'pulse 2s infinite' }} />
+                <Typography variant="h4" sx={{
+                  color: 'white',
+                  fontWeight: 900,
+                  letterSpacing: '-0.5px',
+                  fontSize: { xs: '20px', sm: '28px' },
+                  textShadow: '0 0 20px rgba(16, 185, 129, 0.5)'
+                }}>
+                  {activeTask.name.toUpperCase()}
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', fontSize: '10px' }}>
+                Currently tracking your progress. Stay focused.
+              </Typography>
+            </Box>
+          </>
+        )}
 
         {!activeTask && user && !loading && (
           <>
