@@ -70,6 +70,7 @@ const App: React.FC = () => {
   const [projectFilter, setProjectFilter] = useState<string>(() => localStorage.getItem('projectHistoryFilter') || 'all');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [isRecentSorted, setIsRecentSorted] = useState<boolean>(() => localStorage.getItem('isRecentSorted') === 'true');
+  const [soloProjectId, setSoloProjectId] = useState<string | null>(null);
 
   const selectedTheme = themes[currentTheme] || themes.default;
 
@@ -148,9 +149,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleToggleFocusMode = () => {
-    const nextValue = !isFocusMode;
+  const handleToggleFocusMode = (override?: boolean) => {
+    const nextValue = typeof override === 'boolean' ? override : !isFocusMode;
+    if (nextValue === isFocusMode && !soloProjectId) return;
+
     setIsFocusMode(nextValue);
+    if (!nextValue) setSoloProjectId(null); // Clear solo selection when exiting focus mode
+
     if (nextValue && user) {
       actions.handleAddIdea(`Focus session started at ${dayjs().format('HH:mm')}`, user.uid);
     }
@@ -241,10 +246,10 @@ const App: React.FC = () => {
     return tasks.filter(task => {
       const statusMatch = taskFilter === 'all' || (taskFilter === 'pending' && !task.completedAt) || (taskFilter === 'completed' && !!task.completedAt);
       const projectMatch = projectFilter === 'all' || task.projectId === projectFilter;
-      const focusMatch = !isFocusMode || focusedProjectIds.has(task.projectId);
+      const focusMatch = !isFocusMode || (soloProjectId ? task.projectId === soloProjectId : focusedProjectIds.has(task.projectId));
       return statusMatch && projectMatch && focusMatch;
     });
-  }, [tasks, taskFilter, projectFilter, isFocusMode, projects]);
+  }, [tasks, taskFilter, projectFilter, isFocusMode, projects, soloProjectId]);
 
   const filteredTasks = useMemo(() => baseFilteredTasks.filter(task => {
     const dateMatch = dateFilter === 'all' || formatDate(task.timestamp, 'YYYY-MM-DD') === dateFilter;
@@ -270,10 +275,10 @@ const App: React.FC = () => {
 
   // Auto-exit Focus Mode if no projects are focused
   useEffect(() => {
-    if (isFocusMode && projects && projects.length > 0 && !projects.some(p => p.isFocused)) {
+    if (isFocusMode && !soloProjectId && projects && projects.length > 0 && !projects.some(p => p.isFocused)) {
       setIsFocusMode(false);
     }
-  }, [projects, isFocusMode]);
+  }, [projects, isFocusMode, soloProjectId]);
 
   const graphTasks = useMemo(() => {
     if (dateFilter !== 'all') return filteredTasks;
@@ -385,6 +390,8 @@ const App: React.FC = () => {
                         handleToggleEverydayTask={(projectId: string, date: Date) => actions.handleToggleEverydayTask(projectId, date, user?.uid, tasks || [])}
                         isRecentSorted={isRecentSorted}
                         setIsRecentSorted={setIsRecentSorted}
+                        soloProjectId={soloProjectId}
+                        setSoloProjectId={setSoloProjectId}
                       />
 
                       <TimelineGraph tasks={graphTasks} />

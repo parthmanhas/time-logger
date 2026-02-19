@@ -47,6 +47,7 @@ interface ProjectRowProps {
     lastWorkedOn?: number;
     pendingCount?: number;
     tasks: Task[];
+    onFocusProject: () => void;
 }
 
 const EverydayHeatmap = ({ tasks, onToggle }: { tasks: Task[], onToggle: (date: Date) => void }) => {
@@ -118,6 +119,7 @@ const ProjectRow = memo(({
     lastWorkedOn,
     pendingCount,
     tasks,
+    onFocusProject,
 }: ProjectRowProps) => {
     const [taskName, setTaskName] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -166,10 +168,19 @@ const ProjectRow = memo(({
                 <IconButton
                     size="small"
                     onClick={() => handleToggleProjectFocus(project.id, !!project.isFocused)}
-                    sx={{ color: project.isFocused ? projectColor : 'rgba(255,255,255,0.2)', p: 0.2, mr: 1, flexShrink: 0 }}
+                    sx={{ color: project.isFocused ? projectColor : 'rgba(255,255,255,0.2)', p: 0.2, mr: 0.5, flexShrink: 0 }}
                 >
                     {project.isFocused ? <PushPin sx={{ fontSize: { xs: 12, sm: 16 } }} /> : <PushPinOutlined sx={{ fontSize: { xs: 12, sm: 16 } }} />}
                 </IconButton>
+                <Tooltip title="Focus on this project">
+                    <IconButton
+                        size="small"
+                        onClick={onFocusProject}
+                        sx={{ color: 'rgba(255,255,255,0.2)', p: 0.2, mr: 1, flexShrink: 0, '&:hover': { color: projectColor } }}
+                    >
+                        <Visibility sx={{ fontSize: { xs: 12, sm: 16 } }} />
+                    </IconButton>
+                </Tooltip>
                 {isRenamingProject && selectedProjectId === project.id ? (
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -420,6 +431,8 @@ interface ProjectSectionProps {
     tasks: Task[];
     isRecentSorted: boolean;
     setIsRecentSorted: (val: boolean) => void;
+    soloProjectId: string | null;
+    setSoloProjectId: (val: string | null) => void;
 }
 
 export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
@@ -452,7 +465,16 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
     tasks,
     isRecentSorted,
     setIsRecentSorted,
+    soloProjectId,
+    setSoloProjectId,
 }) => {
+    const [tempFocusedIds, setTempFocusedIds] = useState<Set<string>>(new Set());
+
+    // Clear temp focused IDs when projects update (DB sync)
+    React.useEffect(() => {
+        setTempFocusedIds(new Set());
+    }, [projects]);
+
     const sortProjects = (list: Project[]) => {
         if (!isRecentSorted) {
             return [...list].sort((a, b) => {
@@ -468,8 +490,14 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
         });
     };
 
-    const everydayProjects = sortProjects(projects?.filter(p => (!isFocusMode || p.isFocused) && (!p.projectType || p.projectType === 'everyday')) || []);
-    const finishingProjects = sortProjects(projects?.filter(p => (!isFocusMode || p.isFocused) && p.projectType === 'finishing') || []);
+    const isProjectVisible = (p: Project) => {
+        if (soloProjectId) return p.id === soloProjectId;
+        if (!isFocusMode) return true;
+        return p.isFocused || tempFocusedIds.has(p.id);
+    };
+
+    const everydayProjects = sortProjects(projects?.filter(p => isProjectVisible(p) && (!p.projectType || p.projectType === 'everyday')) || []);
+    const finishingProjects = sortProjects(projects?.filter(p => isProjectVisible(p) && p.projectType === 'finishing') || []);
 
     const renderProjectList = (title: string, list: Project[]) => (
         <Box sx={{ mb: 3 }}>
@@ -497,6 +525,10 @@ export const ProjectSection: React.FC<ProjectSectionProps> = memo(({
                             lastWorkedOn={projectLastWorkedOn.get(p.id)}
                             pendingCount={projectPendingCounts.get(p.id)}
                             tasks={tasks || []}
+                            onFocusProject={() => {
+                                setSoloProjectId(p.id);
+                                setIsFocusMode(true);
+                            }}
                         />
                     ))
                 ) : (
