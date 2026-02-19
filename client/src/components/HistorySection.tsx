@@ -72,6 +72,7 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
     ...taskRowProps
 }) => {
     const [page, setPage] = useState(1);
+    const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
     useEffect(() => {
         setPage(1);
@@ -205,6 +206,8 @@ export const HistorySection: React.FC<HistorySectionProps> = memo(({
                                     key={task.id}
                                     record={task}
                                     project={projects?.find(p => p.id === task.projectId)}
+                                    hoveredDate={hoveredDate}
+                                    setHoveredDate={setHoveredDate}
                                     {...taskRowProps}
                                 />
                             ))

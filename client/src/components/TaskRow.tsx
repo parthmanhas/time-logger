@@ -49,6 +49,8 @@ interface TaskRowProps {
     setEditingTaskId: (id: string | null) => void;
     setEditingField: (field: 'timestamp' | 'completedAt' | 'name' | null) => void;
     setEditingValue: (val: string) => void;
+    hoveredDate?: string | null;
+    setHoveredDate?: (date: string | null) => void;
 }
 
 export const TaskRow: React.FC<TaskRowProps> = ({
@@ -71,19 +73,32 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     setEditingTaskId,
     setEditingField,
     setEditingValue,
+    hoveredDate,
+    setHoveredDate,
 }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const projectColor = project?.color || (project?.id ? getDeterministicColor(project.id) : '#3b82f6');
     const ts = record.timestamp instanceof Timestamp ? record.timestamp.toMillis() : record.timestamp;
     const isTracking = record.isTracking;
+    const taskDate = formatDate(ts, 'YYYY-MM-DD');
+    const isHoveredDay = hoveredDate === taskDate;
 
     return (
-        <TableRow sx={{
-            '& td': { borderBottom: '1px solid rgba(255,255,255,0.05)' },
-            bgcolor: isTracking ? 'rgba(16, 185, 129, 0.04)' : 'transparent',
-            boxShadow: isTracking ? 'inset 2px 0 0 #10b981' : 'none',
-            transition: 'all 0.3s ease'
-        }}>
+        <TableRow
+            onMouseEnter={() => setHoveredDate?.(taskDate)}
+            onMouseLeave={() => setHoveredDate?.(null)}
+            sx={{
+                '& td': { borderBottom: '1px solid rgba(255,255,255,0.05)' },
+                bgcolor: isTracking
+                    ? 'rgba(16, 185, 129, 0.04)'
+                    : isHoveredDay
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'transparent',
+                boxShadow: isTracking ? 'inset 2px 0 0 #10b981' : 'none',
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+            }}
+        >
             <TableCell sx={{
                 width: { xs: 85, sm: 110 },
                 p: { xs: 0.5, sm: 1.5 },
