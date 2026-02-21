@@ -41,6 +41,7 @@ interface TaskRowProps {
     saveEditedTaskName: (id: string) => void;
     updateToNow: (id: string, field: 'timestamp' | 'completedAt') => void;
     handleCompleteTask: (id: string) => void;
+    handleCompleteTaskWithDuration: (id: string, durationMinutes: number) => void;
     handleCompleteAndDuplicateTask: (id: string) => void;
     handleUncompleteTask: (id: string) => void;
     handleDeleteTask: (id: string) => void;
@@ -65,6 +66,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     saveEditedTaskName,
     updateToNow,
     handleCompleteTask,
+    handleCompleteTaskWithDuration,
     handleCompleteAndDuplicateTask,
     handleUncompleteTask,
     handleDeleteTask,
@@ -320,7 +322,29 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                             </Stack>
                         )
                     ) : (
-                        <Stack direction="row" spacing={0.5}>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                            {!isTracking && (
+                                <Stack direction="row" spacing={0.5} sx={{ mr: 1 }}>
+                                    {[10, 20, 30].map(mins => (
+                                        <Button
+                                            key={mins}
+                                            size="small"
+                                            onClick={() => handleCompleteTaskWithDuration(record.id, mins)}
+                                            sx={{
+                                                minWidth: 'auto',
+                                                p: '2px 4px',
+                                                fontSize: '10px',
+                                                bgcolor: 'rgba(16, 185, 129, 0.05)',
+                                                color: '#10b981',
+                                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                                '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.15)' }
+                                            }}
+                                        >
+                                            +{mins}m
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            )}
                             <Tooltip title="Complete & Duplicate (Take Break)">
                                 <IconButton
                                     size="small"

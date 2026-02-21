@@ -101,6 +101,22 @@ export const useTrackerActions = () => {
         }
     };
 
+    const handleCompleteTaskWithDuration = async (id: string, durationMinutes: number) => {
+        try {
+            const now = Date.now();
+            const durationMillis = durationMinutes * 60 * 1000;
+            const startTs = now - durationMillis;
+            await updateDoc(doc(db, 'tasks', id), {
+                timestamp: startTs,
+                completedAt: now,
+                duration: durationMillis,
+                isTracking: false
+            });
+        } catch (error) {
+            console.error('Error completing task with duration:', error);
+        }
+    };
+
     const handleSetTaskActive = async (id: string, active: boolean, userId: string | undefined, tasks: Task[]) => {
         if (!userId) return;
         try {
@@ -256,6 +272,7 @@ export const useTrackerActions = () => {
         handleDeleteTask,
         handleUpdateTask,
         handleCompleteTask,
+        handleCompleteTaskWithDuration,
         handleUncompleteTask,
         handleSetTaskActive,
         handleCompleteAndDuplicateTask,
