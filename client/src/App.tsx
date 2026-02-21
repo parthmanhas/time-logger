@@ -155,10 +155,6 @@ const App: React.FC = () => {
 
     setIsFocusMode(nextValue);
     if (!nextValue) setSoloProjectId(null); // Clear solo selection when exiting focus mode
-
-    if (nextValue && user) {
-      actions.handleAddIdea(`Focus session started at ${dayjs().format('HH:mm')}`, user.uid);
-    }
   };
 
   // Editing logic
@@ -325,7 +321,7 @@ const App: React.FC = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', background: 'transparent' }}>
-        <Container maxWidth="md" sx={{ pt: !activeTask && user && !loading ? { xs: 8, sm: 10 } : 0 }}>
+        <Container maxWidth="md" sx={{ pt: user && !loading ? { xs: 8, sm: 10 } : 0 }}>
           <Header
             user={user}
             handleLogin={handleLogin}
@@ -452,8 +448,8 @@ const App: React.FC = () => {
           )}
         </Container>
 
-        {/* Spacer to prevent content overlap with the sticky bottom bar */}
-        {!activeTask && user && !loading && <Box sx={{ height: { xs: 80, sm: 120 } }} />}
+        {/* Spacer to prevent content overlap with the sticky top and bottom bars */}
+        {user && !loading && <Box sx={{ height: { xs: 80, sm: 120 } }} />}
 
         {activeTask && user && !loading && (
           <>

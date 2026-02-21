@@ -29,14 +29,6 @@ export const useTrackerActions = () => {
                 isTracking: startTracking
             });
 
-            if (startTracking) {
-                // Add a note in Ideas section
-                await addDoc(collection(db, 'ideas'), {
-                    content: `Focus started: ${taskName} [${taskId || ''}] at ${dayjs(now).format('HH:mm')}`,
-                    userId: userId,
-                    createdAt: serverTimestamp(),
-                });
-            }
             return docRef;
         } catch (error) {
             console.error('Error adding task:', error);
@@ -123,7 +115,6 @@ export const useTrackerActions = () => {
                 const task = tasks.find(t => t.id === id);
                 if (task) {
                     const now = Date.now();
-                    const timeStr = dayjs(now).format('HH:mm');
 
                     // Update task timestamp to current time for accurate duration calculation
                     await updateDoc(doc(db, 'tasks', id), {
@@ -131,12 +122,6 @@ export const useTrackerActions = () => {
                         timestamp: now
                     });
 
-                    // Add a note in Ideas section
-                    await addDoc(collection(db, 'ideas'), {
-                        content: `Focus started: ${task.name}${task.taskId ? ` [${task.taskId}]` : ''} at ${timeStr}`,
-                        userId: userId,
-                        createdAt: serverTimestamp(),
-                    });
                 }
             } else {
                 await updateDoc(doc(db, 'tasks', id), { isTracking: false });
@@ -223,12 +208,6 @@ export const useTrackerActions = () => {
                     isTracking: false
                 });
 
-                // 3. Log break in Ideas
-                await addDoc(collection(db, 'ideas'), {
-                    content: `Break taken: ${task.name}${task.taskId ? ` [${task.taskId}]` : ''} at ${dayjs(now).format('HH:mm')}. Task duplicated for later.`,
-                    userId: userId,
-                    createdAt: serverTimestamp(),
-                });
             }
         } catch (error) {
             console.error('Error completing and duplicating task:', error);
